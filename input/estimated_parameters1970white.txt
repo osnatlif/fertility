@@ -1,0 +1,73 @@
+# marriage market parameters																	
+-2.985	#	omega1	=	probability	of	meeting	a	husband	if	below	18						
+-1.9883	#	omega2	=	probability	of	meeting	a	husband	if	in	school						
+-4.563908741	#	omega3	=	probability	of	meeting	a	husband	if	above	18	not	in	school			
+0.75	#	omega4_w	=	women's	age												
+-0.02	#	omega5_w	=	women's	age*age												
+0.75	#	omega4_h	=	men's	age												
+-0.02	#	omega5_h	=	men's	age*age												
+1.67	#	omega6_w	=	women's	probability	of	meeting	a	CG	-	CONSTANT						
+-1.257	#	omega7_w	=	women's	women's	probability	of	meeting	a	CG	if	she	SC				
+-4.054	#	omega8_w	=	women's	probability	of	meeting	a	CG	if	she	HS					
+0.684	#	omega9_w	=	women's	probability	of	meeting	a	SC	-	CONSTANT						
+-1.989	#	omega10_w	=	women's	probability	of	meeting	a	SC	if	she	HS					
+1.67	#	omega6_h	=	#	men's	probability	of	meeting	a	CG	-	CONSTANT					
+-1.257	#	omega7_h	=	#	men's	probability	of	meeting	a	CG	if	he	SC				
+-4.054	#	omega8_h	=	#	men's	probability	of	meeting	a	CG	if	he	HS				
+0.684	#	omega9_h	=	#	men's	probability	of	meeting	a	SC	-	CONSTANT					
+-1.989	#	omega10_h	=	#	men's	probability	of	meeting	a	SC	if	he	HS				
+# wage parameters																	
+0.02	#	beta0_w	=	ability	
+0.03195	#	beta11_w	=	experience	HSD
+0.04884	#	beta12_w	=	experience	HSG
+0.06	#	beta13_w	=	experience	SC
+0.08	#	beta14_w	=	experience	CG
+0.091	#	beta15_w	=	experience	PC
+-0.0003	#	beta21_w	=	exp^2	HSD
+-0.0008	#	beta22_w	=	exp^2	HSG
+-0.0012	#	beta23_w	=	exp^2	SC
+-0.001883	#	beta24_w	=	exp^2	CG
+-0.002	#	beta25_w	=	exp^2	PC
+9.6157	#	beta31_w	=	HSD	
+9.783	#	beta32_w	=	HSG	
+9.974	#	beta33_w	=	SC	
+10.294	#	beta34_w	=	CG	
+10.383575	#	beta35_w	=	PC	
+# wage parameters husband					
+0.1	#	beta0_h	=	ability	
+0.04	#	beta11_h	=	experience	HSD
+0.065	#	beta12_h	=	experience	HSG
+0.1	#	beta13_h	=	experience	SC
+0.11	#	beta14_h	=	experience	CG
+0.115	#	beta15_h	=	experience	PC
+-0.00025	#	beta21_h	=	exp^2	HSD
+-0.00116	#	beta22_h	=	exp^2	HSG
+-0.002331	#	beta23_h	=	exp^2	SC
+-0.0026	#	beta24_h	=	exp^2	CG
+-0.00255	#	beta25_h	=	exp^2	PC
+9.877	#	beta31_h	=	hsd	
+9.939	#	beta32_h	=	hsg	
+10.181	#	beta33_h	=	sc	
+10.402	#	beta34_h	=	cg	
+10.635	#	beta35_h	=	pc	
+# job offer full time																	
+-1.319953109	#	lambda0_w_ft	=	job	offer	parameters	-	wife	-	full	time	constant					
+0.03		#	lambda1_w_ft	=	job	offer	parameters	-	wife	experience								
+0.041191	#	lambda2_w_ft	=	job	offer	parameters	-	wife	education								
+0.103328	#	lambda0_h_ft	=	job	offer	parameters	-	husband	-	full	Time	constant					
+0.00021		#	lambda1_h_ft	=	job	offer	parameters	-	husband	experience								
+0.0016		#	lambda2_h_ft	=	job	offer	parameters	-	husband	education								
+# job offer part timr																	
+-1.972		#	lambda0_w_pt	=	job	offer	parameters	-	wife	-	part-time	constant						
+0.001		#	lambda1_w_pt	=	job	offer	parameters	-	wife	experience								
+0.0024		#	lambda2_w_pt	=	job	offer	parameters	-	wife	education								
+-3.193		#	lambda0_h_pt	=	job	offer	parameters	-	husband	-	part-time	constant						
+0.01		#	lambda1_h_pt	=	job	offer	parameters	-	husband	experience								
+0			#	lambda2_h_pt	=	job	offer	parameters	-	husband	education								
+# prob not got fired			not														
+1.55289		#	lambda0_w_f	=	job	offer	parameters	-	wife	-	not	fired	(	PT	FT)	constant		
+0.049		#	lambda1_w_f	=	job	offer	parameters	-	wife	experience								
+0.18		#	lambda2_w_f	=	job	offer	parameters	-	wife	education								
+1.4291		#	lambda0_h_f	=	job	offer	parameters	-	husband	-	not	fired	(PT	FT)	constant			
+0.057		#	lambda1_h_f	=	job	offer	parameters	-	husband	experience								
+0.19		#	lambda2_h_f	=	job	offer	parameters	-	husband	education								
