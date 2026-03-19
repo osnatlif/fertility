@@ -26,9 +26,8 @@ cdef class Husband:
     cdef int mother_immig
 
 # draw a husband
-cpdef Husband draw_husband(Wife wife, double mother0, double mother1, double mother2)
-cpdef Husband draw_husband_back(Wife wife, double mother0, double mother1, double mother2)
+cpdef Husband draw_husband(Wife wife)
+cpdef Husband draw_husband_back(Wife wife)
 cpdef update_school(Husband husband)        # this function update education in Husnabds structures
-cpdef update_mother_char(Husband husband, double mother0, double mother1, double mother2)
 cpdef update_ability_forward(Husband husband)
 cpdef update_ability_back(Husband husband)

@@ -92,22 +92,6 @@ cpdef update_school(Husband husband):         # this function update education i
     else:
         assert False
 
-cpdef update_mother_char(Husband husband, double mother0, double mother1, double mother2):
-    cdef double temp
-    temp = uniform()*100  # draw wife's parents information + relevant child benefit
-    if temp < mother0:
-        husband.mother_educ = 0
-        husband.mother_marital = 0
-    elif temp < mother1:
-        husband.mother_educ = 0
-        husband.mother_marital = 1
-    elif temp < mother2:
-        husband.mother_educ = 1
-        husband.mother_marital = 0
-    else:
-        husband.mother_educ = 1
-        husband.mother_marital = 1
-    return
 
 
 cpdef update_ability_forward(Husband husband):
@@ -116,9 +100,9 @@ cpdef update_ability_forward(Husband husband):
     cdef double prob_high_ability
     cdef double prob_medium_ability
     cdef double temp
-    temp_high_ability = p.ab_high1 + p.ab_high2 * husband.mother_educ + p.ab_high3 * husband.mother_marital
-    temp_medium_ability = p.ab_medium1 + p.ab_medium2 * husband.mother_educ + p.ab_medium3 * husband.mother_marital
-    prob_high_ability = cmath.exp(temp_high_ability) / (1 + cmath.exp(temp_high_ability) + (temp_medium_ability))
+    temp_high_ability = p.ab_high1
+    temp_medium_ability = p.ab_medium1
+    prob_high_ability = cmath.exp(temp_high_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
     prob_medium_ability = cmath.exp(temp_medium_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
     temp = uniform()
     if temp < prob_high_ability:
@@ -133,23 +117,14 @@ cpdef update_ability_forward(Husband husband):
     return
 
 cpdef update_ability_back(Husband husband):
-    if husband.mother_educ ==1 and husband.mother_marital == 1:
-        husband.ability_i = 2
-        husband.ability_value = c.normal_vector[2] * p.sigma_ability_h
-    elif husband.mother_educ == 0 and husband.mother_marital == 0:
-        husband.ability_i = 0
-        husband.ability_value = c.normal_vector[0] * p.sigma_ability_h
-    else:
-        husband.ability_i = 1
-        husband.ability_value = c.normal_vector[1] * p.sigma_ability_h
+    husband.ability_i = 1
+    husband.ability_value = c.normal_vector[1] * p.sigma_ability_h
 
 
 
-cpdef Husband draw_husband(Wife wife, double mother0, double mother1, double mother2):
+cpdef Husband draw_husband(Wife wife):
     cdef Husband result = Husband()
     result.age = wife.age
-    update_mother_char(result, mother0, mother1, mother2)
-    # update ability by mother education and marital status
     update_ability_forward(result)
     cdef double temp
     cdef double temp1
@@ -256,12 +231,10 @@ cpdef Husband draw_husband(Wife wife, double mother0, double mother1, double mot
     return result
 
 
-cpdef Husband draw_husband_back(Wife wife, double mother0, double mother1, double mother2):
+cpdef Husband draw_husband_back(Wife wife):
 # this function is only used in backward solution for single women
     cdef Husband result = Husband()
     result.age = wife.age
-    result.mother_educ = 0
-    result.mother_marital = 1
     result.ability_i = 1
     result.ability_value = c.normal_vector[1] * p.sigma_ability_h
     if wife.age < 18:

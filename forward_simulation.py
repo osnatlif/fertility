@@ -31,8 +31,6 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
 
     for draw_f in range(0, c.DRAW_F):   # start the forward loop for women
         wife = draw_wife.Wife()           # declare wife structure
-        draw_wife.update_mother_char(wife, c.mother_f[0], c.mother_f[1], c.mother_f[2])
-        # update ability by mother education and marital status
         draw_wife.update_ability_forward(wife)
         # make choices for all periods
 
@@ -58,7 +56,7 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
                 temp = np.random.uniform()
                 if temp < prob_meet_potential_partner:
                     choose_partner = 1
-                    husband = draw_husband.draw_husband(wife, c.mother_f[0], c.mother_f[1], c.mother_f[2])
+                    husband = draw_husband.draw_husband(wife)
 
             if wife.get_married() == 1 or choose_partner == 1:
                 wage_h_full, wage_h_part, _, _, _ = calculate_wage.calculate_wage_h(husband)
@@ -145,8 +143,6 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
 
     for draw_f in range(0, c.DRAW_F):  # start the forward loop for men
         husband = draw_husband.Husband()  # declare husband structure
-        draw_husband.update_mother_char(husband, c.mother_f[0], c.mother_f[1], c.mother_f[2])
-        # update ability by mother education and marital status
         draw_husband.update_ability_forward(husband)
         # make choices for all periods
         for t in range(0, c.max_period_f):
@@ -168,7 +164,7 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
                 temp = np.random.uniform()
                 if temp < prob_meet_potential_partner:
                     choose_partner = 1
-                    wife = draw_wife.draw_wife(husband, c.mother_f[0], c.mother_f[1], c.mother_f[2])
+                    wife = draw_wife.draw_wife(husband)
 
             if husband.get_married() == 1 or choose_partner == 1:
                 wage_w_full, wage_w_part, _, _, _ = calculate_wage.calculate_wage_w(wife)

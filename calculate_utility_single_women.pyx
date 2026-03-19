@@ -13,7 +13,7 @@ from value_to_index cimport ability_to_index
 from value_to_index cimport exp_to_index
 from value_to_index cimport home_time_to_index
 
-cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:,:,:] w_s_emax,
+cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
         double wage_w_part, double wage_w_full, double tmp_w_full, Wife wife, int t, double[:] u_wife_full, int back):
 
     cdef double welfare_stigma_cost = 0
@@ -53,8 +53,6 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:,:,:] w_s_emax,
     cdef double single_value = 0
     cdef int single_index = 0
     cdef double ar = 0
-    cdef int wife_mother_educ_index = 0
-    cdef int wife_mother_marital_index = 0
     cdef double utility_kids = 0
     cdef double utility_leisure = 0
     cdef double temp_w
@@ -192,9 +190,9 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:,:,:] w_s_emax,
 
     school_utility_w = 0
     if wife.schooling == 0 and wife.age < 31:   # if hsd - don't pay tuition
-        school_utility_w = p.s1_w + p.s2_w * wife.mother_educ + p.s3_w * wife.ability_value  # utility from high school
+        school_utility_w = p.s1_w + p.s3_w * wife.ability_value  # utility from high school
     elif wife.schooling > 0 and wife.age < 31:  # if hsg or higher - need to pay tuition
-        school_utility_w = p.s1_w + p.s2_w * wife.mother_educ + p.s3_w * wife.ability_value + p.s4_w  # utility rom post high  school
+        school_utility_w = p.s1_w + p.s3_w * wife.ability_value + p.s4_w  # utility rom post high  school
     else:
         school_utility_w = float('-inf')
     # Home time equation - random walk: tau2_w - pregnancy in previous period, tau1_w - drift term - should be negative
@@ -341,33 +339,31 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:,:,:] w_s_emax,
         wife_exp_index_f = exp_to_index(wife.exp + 1)  # increase experience by 1 if full time job
         wife_exp_index_p = exp_to_index(wife.exp + 0.5)  # increase experience by 0.5 if part-time job
         wife_ability_index = ability_to_index(wife.ability_i)
-        wife_mother_educ_index = wife.mother_educ
-        wife_mother_marital_index = wife.mother_marital
         wife_home_time_index = c.home_production
         wife_home_time_index_preg = c.home_production
 
-        u_wife[0] = u_wife_single[0] + c.beta0 *     w_s_emax[t+1, wife.schooling, wife_exp_index, wife.kids, wife.health, wife_home_time_index, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+        u_wife[0] = u_wife_single[0] + c.beta0 *     w_s_emax[t+1, wife.schooling, wife_exp_index, wife.kids, wife.health, wife_home_time_index, wife_ability_index]
         if wife.age < 40 and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[1] = u_wife_single[1] + c.beta0     * w_s_emax[t+1,wife.schooling, wife_exp_index, kids_index, wife.health, wife_home_time_index_preg,wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[1] = u_wife_single[1] + c.beta0     * w_s_emax[t+1,wife.schooling, wife_exp_index, kids_index, wife.health, wife_home_time_index_preg,wife_ability_index]
         else:
             u_wife[1] = float('-inf')
 
-        u_wife[2] = u_wife_single[2] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_f,wife.kids, wife.health, wife_home_time_index,wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+        u_wife[2] = u_wife_single[2] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_f,wife.kids, wife.health, wife_home_time_index,wife_ability_index]
         if  wife.age < 40 and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[3] = u_wife_single[3] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_f,kids_index, wife.health, wife_home_time_index_preg,wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[3] = u_wife_single[3] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_f,kids_index, wife.health, wife_home_time_index_preg,wife_ability_index]
         else:
             u_wife[3] = float('-inf')
-        u_wife[4] = u_wife_single[4] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_p, wife.kids, wife.health, wife_home_time_index,wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+        u_wife[4] = u_wife_single[4] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_p, wife.kids, wife.health, wife_home_time_index,wife_ability_index]
         if wife.age < 40 and wife.kids < 3:
             kids_index =  wife.kids+1
-            u_wife[5] = u_wife_single[5] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_p, kids_index, wife.health, wife_home_time_index_preg,wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[5] = u_wife_single[5] + c.beta0 * w_s_emax[t+1, wife.schooling, wife_exp_index_p, kids_index, wife.health, wife_home_time_index_preg,wife_ability_index]
         else:
             u_wife[5] = float('-inf')
         if wife.age < 30 and wife.schooling  < 4:
             school_index = min(wife.schooling+1, 4)
-            u_wife[6] = u_wife_single[6] + c.beta0 * w_s_emax[t+1, school_index, wife_exp_index,wife.kids, wife.health, wife_home_time_index,wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[6] = u_wife_single[6] + c.beta0 * w_s_emax[t+1, school_index, wife_exp_index,wife.kids, wife.health, wife_home_time_index,wife_ability_index]
         else:
             u_wife[6] = float('-inf')
 
@@ -378,30 +374,30 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:,:,:] w_s_emax,
             u_wife[6] = float('-inf')
 
         if wife.kids > 0 and wife.welfare_periods < 5:
-            u_wife[7] = u_wife_single[7] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index, wife.kids, wife.health, wife_home_time_index, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[7] = u_wife_single[7] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index, wife.kids, wife.health, wife_home_time_index, wife_ability_index]
         else:
             u_wife[7] = float('-inf')
         if wife.age < 40 and wife.kids > 0 and wife.welfare_periods < 5 and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[8] = u_wife_single[8] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index, kids_index, wife.health, wife_home_time_index_preg, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[8] = u_wife_single[8] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index, kids_index, wife.health, wife_home_time_index_preg, wife_ability_index]
         else:
             u_wife[8] = float('-inf')
         if wife.kids > 0 and wife.welfare_periods < 5:
-            u_wife[9] = u_wife_single[9] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_f, wife.kids, wife.health, wife_home_time_index, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[9] = u_wife_single[9] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_f, wife.kids, wife.health, wife_home_time_index, wife_ability_index]
         else:
             u_wife[9] = float('-inf')  # can't get pregnant after 40
         if wife.age < 40 and wife.kids > 0 and wife.welfare_periods < 5 and wife.kids <3:
             kids_index = wife.kids+1
-            u_wife[10] = u_wife_single[10] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_f, kids_index, wife.health, wife_home_time_index_preg, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[10] = u_wife_single[10] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_f, kids_index, wife.health, wife_home_time_index_preg, wife_ability_index]
         else:
             u_wife[10] = float('-inf')
         if wife.kids > 0 and wife.welfare_periods < 5:
-            u_wife[11] = u_wife_single[11] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_p, wife.kids, wife.health, wife_home_time_index, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[11] = u_wife_single[11] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_p, wife.kids, wife.health, wife_home_time_index, wife_ability_index]
         else:
             u_wife[11] = float('-inf')
         if wife.age < 40 and wife.kids > 0 and wife.welfare_periods < 5 and wife.kids <3:
             kids_index = wife.kids+1
-            u_wife[12] = u_wife_single[12] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_p, kids_index, wife.health, wife_home_time_index_preg, wife_ability_index, wife_mother_educ_index, wife_mother_marital_index]
+            u_wife[12] = u_wife_single[12] + c.beta0 * w_s_emax[t + 1, wife.schooling, wife_exp_index_p, kids_index, wife.health, wife_home_time_index_preg, wife_ability_index]
         else:
             u_wife[12] = float('-inf')
     else:

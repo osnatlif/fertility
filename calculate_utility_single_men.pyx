@@ -12,7 +12,7 @@ cimport gross_to_net as tax
 cimport constant_parameters as c
 from draw_husband cimport Husband
 
-cpdef tuple calculate_utility_single_men(double[:,:,:,:,:,:,:,:,:] h_s_emax,
+cpdef tuple calculate_utility_single_men(double[:,:,:,:,:,:,:] h_s_emax,
     double wage_h_part, double wage_h_full, double tmp_full_h, Husband husband, int t, double[:] u_husband_full, int back):
     ###################################################################################################
     #      calculate utility for single man
@@ -41,8 +41,6 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:,:,:,:,:,:] h_s_emax,
     cdef double single_value = 0
     cdef int single_index = 0
     cdef double ar = 0
-    cdef int husband_mother_educ_index = 0
-    cdef int husband_mother_marital_index = 0
     cdef double temp_h
     cdef double wage_h_full_c = 0
     cdef double wage_h_part_c = 0
@@ -98,9 +96,9 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:,:,:,:,:,:] h_s_emax,
 
     school_utility_h = 0
     if husband.schooling == 1:
-        school_utility_h = p.s1_h + p.s2_h * husband.mother_educ + p.s3_h * husband.ability_value # utility from high school
+        school_utility_h = p.s1_h + p.s3_h * husband.ability_value # utility from high school
     elif husband.schooling > 1:
-        school_utility_h = p.s1_h + p.s2_h * husband.mother_educ + p.s3_h * husband.ability_value + p.s4_w  # utility from post high school
+        school_utility_h = p.s1_h + p.s3_h * husband.ability_value + p.s4_w  # utility from post high school
     # home time equation - random walk - tau0_w -pregnancy in previous period, tau1_w - drift term - should be negative
     # if husband is not married his home time is not influence by a newborn, the wife is influenced of course, so home time for her is not function of M
     if back == 1:
@@ -159,21 +157,19 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:,:,:,:,:,:] h_s_emax,
     elif t < c.max_period - 1:
         husband_exp_index = exp_to_index(husband.exp)
         husband_ability_index = ability_to_index(husband.ability_i)
-        husband_mother_educ_index = husband.mother_educ
-        husband_mother_marital_index = husband.mother_marital
         husband_home_time_index = c.home_production          # index of home time AR(1)
 
-        u_husband[0] = u_husband_single[0] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_exp_index, husband.kids, husband.health, husband_home_time_index, husband_ability_index, husband_mother_educ_index, husband_mother_marital_index]
+        u_husband[0] = u_husband_single[0] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_exp_index, husband.kids, husband.health, husband_home_time_index, husband_ability_index]
         u_husband[1] = float('-inf') # can't get pregnant after 40
         husband_exp_index = exp_to_index(husband.exp+1)
-        u_husband[2] = u_husband_single[2] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_exp_index, husband.kids, husband.health, husband_home_time_index, husband_ability_index, husband_mother_educ_index, husband_mother_marital_index]
+        u_husband[2] = u_husband_single[2] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_exp_index, husband.kids, husband.health, husband_home_time_index, husband_ability_index]
         u_husband[3] = float('-inf')
         husband_exp_index = exp_to_index(husband.exp+0.5)
-        u_husband[4] = u_husband_single[4] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_exp_index,husband.kids, husband.health, husband_home_time_index, husband_ability_index, husband_mother_educ_index, husband_mother_marital_index]
+        u_husband[4] = u_husband_single[4] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_exp_index,husband.kids, husband.health, husband_home_time_index, husband_ability_index]
         u_husband[5] = float('-inf')
         if husband.age < 30 and husband.schooling < 4:
             school_index = min(husband.schooling+1,4)
-            u_husband[6] = u_husband_single[6] + c.beta0 * h_s_emax[t+1, school_index, husband_exp_index, husband.kids, husband.health, husband_home_time_index, husband_ability_index, husband_mother_educ_index, husband_mother_marital_index]
+            u_husband[6] = u_husband_single[6] + c.beta0 * h_s_emax[t+1, school_index, husband_exp_index, husband.kids, husband.health, husband_home_time_index, husband_ability_index]
         else:
             u_husband[6] = float('-inf')
         if husband.age > 20 and husband.age < 30 and husband.schooling < 2:

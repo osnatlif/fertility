@@ -35,8 +35,7 @@ cpdef update_wife_schooling(Wife wife)
 
 # update wife's ability
 #cpdef update_ability(int ability, Wife wife)
-cpdef Wife draw_wife(Husband husband, double mother1, double mother2, double mother3)
-cpdef Wife draw_wife_back(Husband husband, double mother1, double mother2, double mother3)
-cpdef update_mother_char(Wife wife, double mother1, double mother2, double mother3)
+cpdef Wife draw_wife(Husband husband)
+cpdef Wife draw_wife_back(Husband husband)
 cpdef update_ability_forward(Wife wife)
 cpdef update_ability_back(Wife wife)
