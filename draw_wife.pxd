@@ -2,24 +2,18 @@ from draw_husband cimport Husband
 
 # Wife class
 cdef class Wife:
-    cdef int hsd
-    cdef int hsg
+    cdef int hs
     cdef int sc
     cdef int cg
-    cdef int pc
-    cdef int schooling              # wife schooling, can get values of 0-4
+    cdef public int schooling        # wife schooling, 0=HS, 1=SC, 2=CG+
     cdef int years_of_schooling
-    cdef double exp                 # wife experience
-    cdef double exp_2               # wife experience squared
     cdef int emp                    # wife employment state
     cdef double capacity
     cdef int married
     cdef int divorce
     cdef int age
     cdef int kids                       # wife's kids
-    cdef int health
     cdef int preg
-    cdef double home_time_ar
     cdef double ability_value
     cdef int ability_i
     cdef int mother_educ
@@ -30,6 +24,7 @@ cdef class Wife:
     cdef int age_first_child
     cdef int age_second_child
     cdef int age_third_child
+    cdef int kb5                       # number of kids below 5
     cdef double match_quality
 cpdef update_wife_schooling(Wife wife)
 

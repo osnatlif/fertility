@@ -1,0 +1,516 @@
+\documentclass[12pt]{article}
+\usepackage{natbib}
+\bibliographystyle{apalike}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{adjustbox}
+\usepackage{amsmath}
+\usepackage{subfig}
+\usepackage{subcaption}
+\usepackage{amsthm}
+\usepackage[nohead]{geometry}
+\usepackage[singlespacing]{setspace}
+\usepackage[bottom]{footmisc}
+%\usepackage{indentgrafirst}
+\usepackage{endnotes}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{pdflscape}
+\usepackage{subfig}
+\usepackage{array}%
+\usepackage{bbm}
+\usepackage{fancyref}
+\usepackage{pdflscape}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{threeparttable}
+\usepackage{multicol}
+\usepackage{wrapfig,lipsum,booktabs}
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{assumption}{Assumption}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+
+
+
+\makeatletter
+\def\@biblabel#1{\hspace*{-\labelsep}}
+\makeatother \geometry{left=1in,right=1in,top=1.00in,bottom=1.0in}
+\newenvironment{mfignotes}{\begin{footnotesize}\begin{minipage}{\textwidth}\begin{footnotesize}\begin{spacing}{1} \smallskip\par \emph{Notes:}}
+{\end{spacing}\end{footnotesize}\end{minipage}\end{footnotesize}}
+
+
+\newenvironment{mfigsource}{\begin{footnotesize}\begin{minipage}{\textwidth}\begin{scriptsize}\smallskip\par \emph{Source -}  }
+{\end{scriptsize}\end{minipage}\end{footnotesize}}
+\usepackage{verbatim}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage[hypertexnames=false]{hyperref}
+ \hypersetup{
+  colorlinks,
+  citecolor=Blue,
+  linkcolor=Blue,
+  urlcolor=blue
+  }
+
+ \usepackage{color,hyperref}
+% Title and authors
+\title{Delay Without Decline: Education, Marriage, and U.S. Cohort Fertility, 1960-1985}
+
+\author{Rania Gihleb, University of Pittsburgh\\Osnat Lifshitz, Reichman University }
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\begin{abstract}
+\indent Recent evidence suggests declining U.S. fertility. We show this conclusion depends critically on measurement. Completed cohort fertility (CCF) for white women born 1960-1985 remained stable at approximately 2.1 children while period total fertility rates fell by 15\%, reflecting a shift in timing rather than completed fertility. Aggregate CCF stability, however, masks substantial changes in its components: marriage rates fell sharply, particularly among the less-educated, while fertility conditional on marriage increased across all education groups. We decompose aggregate fertility trends and show that composition effects account for observed patterns. Within every education-marital status cell, fertility rose between the 1960 and 1985 cohorts. The stable aggregate reflects offsetting compositional forces: declining marriage rates (negative composition effect) and rising within-group fertility (positive within-group effect). The marriage decline stems from increasing educational mismatch in marriage markets. Women's educational attainment grew faster than men's while assortative mating patterns remained stable, reducing match probabilities for college-educated women and less-educated men. We develop and estimate a structural life-cycle model of education, employment, marriage, and fertility that quantitatively accounts for these patterns. Using the model, we forecast fertility for the 1990 cohort and evaluate counterfactual policy interventions. \textbf{HOPE TO SAY: Policies that increase the human capital of less-educated men generate larger increases in marriage and fertility than direct fertility subsidies, suggesting that addressing marriage market frictions may be more effective than traditional pronatalist transfers.}
+\end{abstract}
+
+
+
+\doublespacing
+
+\section{Introduction}
+
+Is U.S. fertility declining? The answer depends critically on how we measure fertility. Period fertility (the annual birth rate) has fallen substantially over recent decades. But completed cohort fertility (CCF) for white women born between 1960 and 1985 remained broadly stable, even as the timing of childbearing shifted dramatically later in the life cycle.
+
+This paper documents and explains this apparent paradox. We show that:
+
+\begin{enumerate}
+    \item \textbf{Delay, not decline}: CCF stability masks substantial postponement. The 1985 cohort reached the 1960 cohort's fertility level five years later (age 38 vs. 33)
+
+    \item \textbf{Marriage drives the pattern}: Fertility conditional on ever-married status is stable or rising across all education groups; the decline in aggregate fertility comes entirely from falling marriage rates
+
+    \item \textbf{Educational mismatch matters}: As women's educational attainment rose faster than men's, the marriage market experienced growing mismatch, particularly affecting less-educated men and college-educated women
+
+    \item \textbf{Composition effects dominate}: The weakening education-fertility gradient reflects rising fertility among college graduates, not declining fertility among the less-educated
+\end{enumerate}
+
+Our contribution is threefold. First, we provide a comprehensive decomposition showing that marriage and education composition, not changes in desired fertility, drive aggregate trends. Second, we develop and estimate a structural life-cycle model that accounts for labor market conditions, assortative mating patterns, and educational distributions in explaining marriage and fertility decisions. Third, we use the model to forecast fertility for the 1990 cohort and evaluate policy interventions, finding that policies raising human capital of less-educated men are more effective than direct fertility subsidies.
+
+The rest of the paper proceeds as follows. Section \ref{sec:facts} documents stylized facts on fertility, marriage, and education. Section \ref{sec:framework} presents our conceptual framework and introduces the marriage market mismatch mechanism. Section \ref{sec:model} describes the structural model. Section \ref{sec:estimation} discusses estimation and model fit. Section \ref{sec:counterfactuals} presents counterfactual policy experiments. Section \ref{sec:conclusion} concludes.
+
+\section{Empirical Motivation and Stylized Facts} \label{sec:facts}
+
+We begin by documenting key cohort-level trends in fertility, marriage, and education that motivate our analysis. We focus on US white women\footnote{We focus on white women to abstract from racial disparities in marriage markets and fertility patterns, which merit separate analysis.} aged 40 to 49 using data from the CPS March and June Fertility Supplement. This cohort-based approach allows us to distinguish between delayed and permanently forgone childbearing.
+
+Throughout this section, we emphasize the distinction between \textbf{within-group changes} (fertility behavior conditional on education or marriage) and \textbf{composition effects} (changes in the share of the population in different groups). As we show, composition effects are the primary driver of aggregate fertility trends.
+
+\subsection{Fertility Timing and Delay Across Cohorts}
+
+Between the 1960 and 1985 birth cohorts, completed cohort fertility for white women remains broadly stable, but the timing of childbearing shifts dramatically later. Women in the 1980 cohort reach the completed fertility level of the 1960 cohort by roughly age 33, while women in the 1985 cohort reach it only by roughly age 38. These patterns indicate substantial postponement rather than a decline in total lifetime fertility for these cohorts.
+
+% Figure 1: Fertility timing
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure1_fertility_timing.pdf}
+    \caption{Fertility Timing and Delay Across Cohorts}
+    \label{fig:fertility_timing}
+    \note{Source: CPS March and June Fertility Supplement. Sample restricted to white women aged 40-49.}
+\end{figure}
+
+Whether the 1990 cohort will converge to similar CCF levels remains an open question; we use our structural model to forecast this cohort's fertility trajectory. To understand the drivers of delayed fertility, we examine two closely related factors: marriage patterns and educational attainment, both of which are strong predictors of fertility.
+
+\subsection{The Weakening Education-Fertility Gradient}
+
+Traditional economic theory predicts a negative effect of education on fertility, and older cohorts exhibit this correlation. However, for cohorts born after 1960, this pattern weakens markedly.
+
+Figure \ref{fig:fertility_by_ed} presents CCF by three education levels: HS (up to 12 years of schooling), SC (some college), and CG (college graduates). For cohorts up to 1960, the negative correlation between fertility and education is evident in the data. From the 1960 cohort onward, fertility of CG women rises steadily, nearly reaching the CCF of HS and SC women.
+
+% Figure 2A: Education gradient
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure2a_fertility_by_education.pdf}
+    \caption{The Weakening Education-Fertility Gradient}
+    \label{fig:fertility_by_ed}
+    \note{CCF by education group. HS = high school or less; SC = some college; CG = college graduate.}
+\end{figure}
+
+\textbf{This pattern reflects changes within education groups, not just compositional shifts.} Moreover, prior to the 1960 cohort, women's lifecycle employment was still rising, which may explain the decrease in fertility. After the 1960 cohort, women's employment stabilized, and CCF within each education level becomes stable or increasing.
+
+The negative compositional effect of education on aggregate CCF operates mechanically: CG women increase their fertility, but their CCF level remains lower than other groups, and the proportion of this group increased substantially between 1960 and 1985, exerting a negative compositional effect on aggregate fertility.
+
+\subsection{Fertility by Education and Marital Status}
+
+While the correlation between education and fertility has weakened, the correlation between marital status and fertility remains strong, stable, and if anything, slightly growing. Figure \ref{fig:fertility_by_marriage} presents the CCF by cohort and marital status. We use the rate of ``ever-married'' instead of ``currently married'' as it better reflects total fertility because cohort fertility accumulates over the lifecycle. The figure for ``currently married'' looks extremely similar.
+
+% Figure 2B: By marriage status
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure2b_fertility_by_marriage.pdf}
+    \caption{Completed Cohort Fertility by Education and Marital Status}
+    \label{fig:fertility_by_marriage}
+\end{figure}
+
+\textbf{Aggregate cohort fertility can be decomposed into fertility among ever-married and never-married women weighted by their shares. As Figure \ref{fig:marriage_rates} will show, the share ever-married declines sharply, mechanically pulling down aggregate fertility even as fertility conditional on marriage remains stable.}
+
+\subsection{Marriage Rates by Education and Cohort}
+
+The gap in fertility by marital status is indeed stable, yet the marriage rate decreased substantially over this period, especially for less-educated individuals. Figure \ref{fig:marriage_rates} presents the ``ever-married'' rate for men and women by the three levels of education.
+
+% Figure 3: Marriage rates
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure3_marriage_rates.pdf}
+    \caption{Marriage Rates by Education and Cohort}
+    \label{fig:marriage_rates}
+\end{figure}
+
+\textbf{Fertility is highly correlated with ever-married status} across all educational groups. While marriage rates were high and stable for the \textbf{1960 cohort} (approximately 90\% of women ever married by age 40), by the \textbf{1985 cohort} they declined significantly, particularly for the less educated. Among ever-married women, \textbf{fertility remained stable or even increased}, indicating that the decline in aggregate fertility is largely driven by \textbf{declines in marriage, not in childbearing conditional on marriage}.
+
+\subsection{Fertility Within Education-Marital Status Groups}
+
+Having established that marriage rates fell while fertility conditional on marriage remained stable, we now examine whether this pattern holds within specific education-marriage cells. Figure \ref{fig:fertility_ed_marriage} plots the CCF of the 1960 and 1985 cohorts by education and marital status. \textbf{This figure reveals a striking pattern: each} of the six groups (three education levels $\times$ two marital statuses) increased fertility between the two cohorts.
+
+% Figure 4: Ed x Marriage
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure4_fertility_ed_marriage.pdf}
+    \caption{Completed Cohort Fertility by Education $\times$ Marriage Status}
+    \label{fig:fertility_ed_marriage}
+    \note{Comparison of 1960 and 1985 cohorts across all six groups.}
+\end{figure}
+
+\textbf{This means any decline in aggregate fertility is due entirely to composition effects, specifically, the declining share of ever-married women. To explain aggregate fertility trends, we must therefore explain the decline in marriage rates.}
+
+\subsection{Assortative Mating Patterns}
+
+Having established that marriage drives aggregate fertility trends, we now examine the assortative mating patterns that shape marriage market outcomes. \textbf{Three empirical patterns emerge:}
+
+\textbf{First, assortative mating among married women remains remarkably stable.} Half of CG women are married to CG men (70\% of married CG women) throughout the period, even though the ratio of CG men to CG women changed substantially.
+
+\textbf{Second, despite women becoming more educated than men on average, the share of women ``marrying down'' does not increase.} The increase in women marrying down, which was observed in our previous work \citep{gihleb_lifshitz} focusing on older cohorts (1945-1965), is no longer observed in these cohorts.
+
+\textbf{Third, CG men adjust to the changing supply:} the share of CG men who are married to CG women increases from 60\% to almost 90\%.
+
+% Figure 5: Assortative mating
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure5_assortative_mating.pdf}
+    \caption{Assortative Mating Patterns}
+    \label{fig:assortative_mating}
+\end{figure}
+
+\textbf{These stable assortative mating patterns among married individuals, combined with diverging educational distributions, point to a marriage market mismatch mechanism.} As the supply of college-educated women rises relative to college-educated men, highly educated women face constraints in finding educationally-matched partners, while less-educated men become less marriageable. \textbf{One implication: policies that increase the supply of college-educated men may relax marriage market constraints.}
+
+\subsection{Wages and Within-Household Earnings}
+
+The stable assortative mating patterns reflect, in part, the economic incentives created by labor market returns to education. We now examine how wages vary by educational pairing to understand the economic gains from marriage.
+
+The stable demand for CG husbands and the increasing demand for CG wives reflects the increasing wages and job offer probabilities of CG individuals.
+
+Figure \ref{fig:wages_husbands} presents the wages of husbands by the level of education of both partners. The figure shows a positive correlation between the husband's wage and education. However, the figure also presents potential selection and/or endogenous effects of marriage by wages. Given the husband's education level, his income is positively correlated with his wife's education. This provides evidence of a substitutional effect between a partner's education and wages. Nevertheless, when examining relative wages, it seems that relatively higher wages cannot compensate for a lower education level.
+
+% Figure 6: Husband wages
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure6_husband_wages.pdf}
+    \caption{Annual Wages of Married Men by Both Partners' Education Levels}
+    \label{fig:wages_husbands}
+\end{figure}
+
+The declining wage ratios for later cohorts may reflect decreasing selection into dual-earner marriages as employment among married women becomes more universal, or alternatively, increasing wage premiums for highly educated men. Further investigation of this pattern is warranted.
+
+Figure \ref{fig:wage_ratio} presents the wages of wives relative to the wages of their husbands (an intra-household wage ratio).
+
+% Figure 7: Wage ratios
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure7_wage_ratio.pdf}
+    \caption{Wife to Husband Wage Ratio by Assortative Mating (When Both Employed)}
+    \label{fig:wage_ratio}
+\end{figure}
+
+\section{Educational Mismatch in the Marriage Market: A Conceptual Framework} \label{sec:framework}
+
+The empirical patterns documented above point to a specific mechanism driving the decline in marriage rates: \textbf{educational mismatch in the marriage market.}
+
+ In the 1960 cohort, the education distributions of men and women were nearly identical, and the rates of ever-married were approximately 85 to 90\% for all levels of education (Figure \ref{fig:marriage_rates}). Across cohorts, women's education levels rose faster than men's.
+
+\textbf{Figure \ref{fig:ed_distributions} [TO BE ADDED] shows the dramatic shift in educational distributions between the 1960 and 1985 cohorts.}
+
+% NEW FIGURE
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/figure_education_distributions.pdf}
+    \caption{Education Distributions by Gender and Cohort}
+    \label{fig:ed_distributions}
+    \note{\textbf{Distribution of education levels (HS, SC, CG) for men and women in the 1960 and 1985 cohorts. Source: CPS March Supplement.}}
+\end{figure}
+
+\textbf{By the 1985 cohort:}
+
+\begin{itemize}
+    \item The education distributions of men and women diverged substantially
+    \item A growing share of women became more educated than the median male
+    \item Assortative mating patterns among those who marry remained stable (Figure \ref{fig:assortative_mating})
+\end{itemize}
+
+
+
+\textbf{This creates a marriage market mismatch.} College-educated women seek college-educated partners (as evidenced by stable assortative mating), but face a declining supply of such men relative to demand. Less-educated men, meanwhile, face reduced marriageability as potential female partners become more educated and maintain preferences for equal or higher-educated spouses.
+
+\textbf{Why doesn't the marriage market clear through women ``marrying down''?} Our data show no increase in women marrying less-educated men despite the growing educational gap. This suggests persistent preferences for assortative mating that do not adjust quickly to supply-side shifts.
+
+A natural question arises: Why did marriage rates fall primarily among the less-educated if mismatch affects both highly educated women and less-educated men? Our evidence points to asymmetric effects. Less-educated men face reduced marriage probabilities across the board, while highly educated women delay marriage (contributing to postponement of childbearing) and ultimately marry at lower rates than previous cohorts, but the effect is more concentrated among less-educated men.
+
+The model formalizes this mechanism by incorporating:
+\begin{enumerate}
+    \item Meeting probabilities that depend on population distributions by education
+    \item Mutual matching that reflects assortative mating preferences
+    \item Labor market returns that create economic gains from marriage that vary by education
+\end{enumerate}
+
+\subsection{Why a Structural Model?}
+
+The empirical patterns raise three questions that descriptive analysis cannot answer:
+
+\begin{enumerate}
+    \item \textbf{Forecasting:} Will the 1990 cohort experience continued fertility declines as educational mismatch grows?
+
+    \item \textbf{Decomposition:} How much of the marriage decline is attributable to educational mismatch versus other factors (e.g., changing preferences, labor market conditions)?
+
+    \item \textbf{Policy evaluation:} What interventions are most effective at increasing marriage and fertility? Direct fertility subsidies, or policies that address marriage market mismatch?
+\end{enumerate}
+
+To answer these questions, we develop and estimate a structural life-cycle model that incorporates education distributions, labor market conditions, and marriage market matching. The model allows us to conduct counterfactual experiments that vary these inputs separately.
+
+\section{A Life-Cycle Model of Labor Supply, Marriage, and Fertility} \label{sec:model}
+
+We build and estimate a dynamic model of household decisions in which men and women make annual decisions about work, marriage, and fertility. The model captures three key features that allow us to assess the marriage market mismatch mechanism: (1) meeting probabilities depend on the education distributions of men and women in the population, (2) marriage formation requires mutual consent with individual participation constraints for both partners, and (3) fertility decisions and their associated utility differ by marital status.
+
+We group individuals into six types by gender and education (HS, SC, CG) and take education as given. Individuals enter the model at the age corresponding to their education level---age 18 for HS, age 20 for SC, and age 22 for CG---as single, and then make work (and for women, fertility) decisions each year. Single individuals may meet potential partners in a marriage market; if a couple forms, subsequent labor supply and fertility decisions are made jointly. At each point, individuals compare the value of remaining single to the value of marriage.
+
+\subsection{The Problem of a Single Individual}
+
+The subscript $s$ indicates that individual $j$ is single, while $j = m, f$ indicates men and women respectively. At each age $t$, individual $j$ decides whether to work ($de_{tj} \in \{0, 0.5, 1\}$), and, in the case of women, whether to have a child ($dn_t = 1, N_{t+1} = N_t + 1$) where $N_t$ is the number of children. Within-period preferences for individual $j$, conditional on being single, are denoted by $U_{tj}^s(C_{tj}^s, de_{tj}, N_t)$.
+
+In addition, the individual makes a choice to marry, which will also depend on getting an offer. The decision to marry takes place at the start of the period after all shocks are realized; employment and fertility decisions are conditional on the marriage decision.
+
+If an individual remains single, income is:
+
+\begin{equation}
+Y_{tj}^S = w_t^j h_t^j - T_t^s(w_t^j h_t^j, N_t) - CC \cdot N_t^{<5} \cdot \mathbbm{1}(de_{tf} > 0) \quad \text{for } j = m, f
+\label{eq:single_income}
+\end{equation}
+
+where $w_t^j$ and $h_t^j$ for $j = f, m$ are wage rates and hours of work, respectively. $T_t^s(\cdot)$ is the tax function for singles (filing separately). We model the U.S.\ federal tax system in detail, including deductions, exemptions, EITC, individual taxation for singles and joint taxation of couples. $CC$ is the annual financial cost of childcare per child under age 5, paid only when the woman works. The wage rate $w_t^j$ follows a persistent stochastic process, detailed below.
+
+\textbf{Childcare affordability constraint.} If childcare costs push a woman's net income from working below the unemployment benefit floor $b_j$, she cannot afford to work and is constrained to non-employment:
+\begin{equation}
+\text{If } Y_{tj}^S\big|_{de_{tf}>0} < b_f, \quad \text{then } de_{tf} = 0
+\label{eq:childcare_constraint}
+\end{equation}
+This constraint ensures that the budget is always positive and that women with young children and low wages are endogenously constrained out of employment when childcare costs exceed their earnings net of taxes.
+
+Consumption for a single person is:
+
+\begin{equation}
+C_{tj}^s = (1 - \theta(N_t))Y_{tj}^s
+\label{eq:single_consumption}
+\end{equation}
+
+The parameter $\theta(N_t)$ is the fraction of household income that is spent on children. We use the square root equivalence scale to determine $\theta(N_t)$, following standard practice in the household economics literature. Children affect consumption and the opportunity cost of women's time in the labor market. The state space for a single individual is $\Omega_{tj} = \{a_j, e_{t-1,j}, N_t, N_t^{<5}, ed_j\}$, where $a_j$ is unobserved ability, $e_{t-1,j}$ is prior employment status, $N_t^{<5}$ is the number of children under 5, and $ed_j \in \{HS, SC, CG\}$ is education.
+
+With probability $\lambda_t$, at the beginning of the period a single individual meets a potential partner with education $ed_j = \{HS, SC, CG\}$, ability $a$, and employment history. Together they draw an initial match quality $q_0$. The meeting probability $\lambda_t$ follows a quadratic function of age:
+\begin{equation}
+\lambda_t = \omega_1 \cdot t^2 + \omega_2 \cdot t + \omega_3
+\label{eq:meeting_prob}
+\end{equation}
+with very low meeting rates at young ages (below age 20) and a peak around age 30--32. The education of the potential partner is drawn from the population distribution of unmarried individuals of the opposite gender.
+
+If the match is formed ($dm_t = 1$), and 0 otherwise. The process governing this decision, which involves both partners, is described in the subsection on the marriage market.
+
+We denote by $V_{tj}^s$ the value function for a single individual at age $t$ and $V_{tj}^m$ the value function for a married individual at age $t$. A single individual has the following value function:
+
+\begin{equation}
+\begin{aligned}
+V_{tj}^s(\Omega_{tj}) = \max_{\{de_{tj}, dn_t\}} \Big[ &U_{tj}^s(C_{tj}^s, de_{tj}, N_t) + \\
+&\delta \, \mathbb{E}\big(\lambda_{t+1} \cdot dm_{t+1} \cdot V_{t+1,j}^m + (1 - \lambda_{t+1} \cdot dm_{t+1}) \cdot V_{t+1,j}^s\big) \Big]
+\end{aligned}
+\label{eq:single_value}
+\end{equation}
+
+The parameter $\delta$ is the discount rate and $\mathbb{E}(\cdot)$ is the expectation operator. Note that the expected value function takes into account the possibility that the person may get married at $t+1$, subject to the intertemporal budget constraint.
+
+We parameterize within-period utility for single individual $j$ as follows:
+
+\begin{equation}
+U_{tj}^s = \frac{1}{\alpha_0}(C_t^j)^{\alpha_0} + \alpha_{2,0}^j \cdot \ell_{tj} + \alpha_{2,1}^j \cdot N_t \cdot \ell_{tj} + \alpha_{3,j}^s \cdot N_t^{\alpha_4} + dn_t \cdot \xi_t
+\label{eq:single_utility}
+\end{equation}
+
+The first term is a CRRA in consumption with curvature parameter $\alpha_0 \in (0,1)$, where $\ell_{tj} = 1 - de_{tj}$ represents leisure. The leisure terms $\alpha_{2,0}^j$ and $\alpha_{2,1}^j$ allow the value of leisure to depend on gender and on the number of children (capturing increased home production needs). The term $\alpha_{3,j}^s \cdot N_t^{\alpha_4}$ captures the flow utility from children with diminishing returns governed by $\alpha_4 < 1$; the coefficient $\alpha_{3,j}^s$ is specific to singles and is generally lower than the married counterpart, reflecting that children provide less utility outside of marriage (e.g., due to reduced household economies of scale or social norms). $\xi_t$ is the pregnancy shock, drawn from $N(0, \sigma_p^2)$, representing unobserved idiosyncratic variation in the cost of pregnancy. The model has a finite horizon and is solved by backward recursion.
+
+\subsection{The Problem of a Married Couple}
+
+There are two transitions to consider: first, for couples, whether an existing marriage continues or ends in divorce; second, for singles, whether a meeting between a single man and a single woman results in marriage.
+
+For the marriage to continue, individual participation constraints need to be satisfied. The value of marriage must be larger than the value of being single for both spouses:
+
+\begin{equation}
+V_{tf}^M(\Omega_{tm}, \Omega_{tf}) > V_{tf}^s(\Omega_{tf}) \quad \text{and} \quad V_{tm}^M(\Omega_{tm}, \Omega_{tf}) > V_{tm}^s(\Omega_{tm})
+\label{eq:participation}
+\end{equation}
+
+Shocks to match quality, pregnancy, and to the wages of each partner can change the value of becoming single and the value of remaining married. Divorce can take place unilaterally, when there is no choice in the couple's set of choices $(de_{tm}, de_{tf}, dn_t)$ such that each person can have a non-negative surplus from remaining married. Divorce entails a fixed utility cost $dc_j$ for each spouse, with an additional cost $dc_j^{kids}$ if the couple has children, reflecting the disruption of divorce on family welfare.
+
+The second transition to consider is for single individuals getting married. Whether a meeting between a single man and a single woman results in marriage depends on the existence of a feasible allocation that satisfies both participation constraints in equation~\eqref{eq:participation}. Marriage entails a one-time utility cost $mc$ reflecting the transaction costs of forming a new household.
+
+When married, the household income is:
+
+\begin{equation}
+Y_t^M = w_t^m h_t^m + w_t^f h_t^f - T_t^m(w_t^m h_t^m, w_t^f h_t^f, N_t) - CC \cdot N_t^{<5} \cdot \mathbbm{1}(de_{tf} > 0)
+\label{eq:married_income}
+\end{equation}
+
+The childcare affordability constraint applies to married women as well: if the wife's net contribution to household income after childcare costs is negative (i.e., the household would have higher net income with the wife not working), then the wife-employed option is infeasible for that combination of spousal employment states.
+
+Household consumption takes the form:
+
+\begin{equation}
+C_t^M = (1 - \theta(N_t)) \cdot Y_t^M \cdot \psi
+\label{eq:married_consumption}
+\end{equation}
+
+where $\psi \in (1/2, 1)$ captures household economies of scale in consumption. Each spouse receives the full consumption amount $C_t^M$, reflecting the public-good nature of household consumption.
+
+A married individual has the following value function:
+
+\begin{equation}
+\begin{aligned}
+V_{tj}^M(\Omega_{tm}, \Omega_{tf}) = \max_{\{de_{tm}, de_{tf}, dn_t\}} \Big[ &U_{tj}^m(C_t^M, de_{tm}, de_{tf}, N_t, q_t) + \\
+&\delta \, \mathbb{E}\big(dm_{t+1} \cdot V_{t+1,j}^M + (1 - dm_{t+1}) \cdot V_{t+1,j}^s\big) \Big] \\
+&\quad j = m, f
+\end{aligned}
+\label{eq:married_value}
+\end{equation}
+
+We parameterize within-period utility for a married individual as follows:
+
+\begin{equation}
+U_{tj}^M = \frac{1}{\alpha_0}(C_t^M)^{\alpha_0} + \alpha_{2,0}^j \cdot \ell_{tj} + \alpha_{2,1}^j \cdot N_t \cdot \ell_{tj} + \alpha_{3,j}^M \cdot N_t^{\alpha_4} + \mu^M(ed_f, ed_m) + q_t + dn_t \cdot \xi_t^M
+\label{eq:married_utility}
+\end{equation}
+
+The consumption term uses the same CRRA specification as the single case. The leisure terms are gender-specific. The term $\alpha_{3,j}^M \cdot N_t^{\alpha_4}$ captures the flow utility from children within marriage, where $\alpha_{3,j}^M$ is typically larger than $\alpha_{3,j}^s$, reflecting greater returns to children within a two-parent household.
+
+The marriage-specific utility $\mu^M(ed_f, ed_m)$ depends on the educational match between spouses. We allow three distinct taste parameters:
+\begin{equation}
+\mu^M(ed_f, ed_m) = \begin{cases}
+\mu_{equal} & \text{if } ed_f = ed_m \\
+\mu_{up} & \text{if } ed_m > ed_f \text{ (husband more educated)} \\
+\mu_{down} & \text{if } ed_f > ed_m \text{ (wife more educated)}
+\end{cases}
+\label{eq:marriage_taste}
+\end{equation}
+This specification allows the model to capture preferences for assortative mating: if $\mu_{equal} > \mu_{up} > \mu_{down}$, individuals prefer same-education matches. These taste parameters, combined with the economic gains from marriage (which depend on spousal wages), endogenously generate the assortative mating patterns observed in the data.
+
+The match quality $q_t = q_0 + \varepsilon_t^q$ consists of a persistent component $q_0$ drawn at match formation and a transitory shock $\varepsilon_t^q \sim N(0, \sigma_q^2)$. Negative realizations of $\varepsilon_t^q$ are one factor driving divorce.
+
+The pregnancy cost for married women is $\xi_t^M = \bar{\xi}^M + \bar{\xi}^{kids} \cdot N_t + \varepsilon_t^p$, where $\bar{\xi}^M$ is the baseline pregnancy cost, $\bar{\xi}^{kids}$ captures the increasing cost of additional pregnancies, and $\varepsilon_t^p \sim N(0, \sigma_p^2)$ is an idiosyncratic shock. The pregnancy cost for unmarried women is $\bar{\xi}^S$, which is substantially larger, reflecting the greater difficulty of single motherhood.
+
+We adopt a collective model of household decision making. The partners choose leisure and fertility to maximize the weighted value function:
+
+\begin{equation}
+V_t^{HH} = \lambda \cdot V_{tf}^M(\Omega_{tm}, \Omega_{tf}) + (1 - \lambda) \cdot V_{tm}^M(\Omega_{tm}, \Omega_{tf})
+\label{eq:collective}
+\end{equation}
+
+Here $\lambda$ and $(1 - \lambda)$ are Pareto weights. Couples seek a choice vector $\{de_{tm}, de_{tf}, dn_t\}$ that maximizes~\eqref{eq:collective}, subject to both participation constraints in~\eqref{eq:participation}.
+
+\subsection{Labor Market: Wages and Job Offer Probabilities}
+
+The wage process for men and women takes the form:
+
+\begin{equation}
+\ln w_t^{j,E} = \beta_0^j \cdot a_j + \beta_1^{j,E} \cdot x_t + \beta_2^{j,E} \cdot x_t^2 + \beta_3^{j,E} + \beta_4^{j,E} \cdot (1 - e_{t-1,j}) + \varepsilon_{jt}^W
+\label{eq:wage}
+\end{equation}
+
+for $j = f, m$ and $E \in \{CG, SC, HS\}$, where $a_j$ is unobserved ability (drawn from a discrete distribution with three mass points: low, medium, high), $x_t$ is labor market experience (age minus entry age), and $e_{t-1,j}$ is prior-period employment status. The term $\beta_0^j \cdot a_j$ captures the effect of unobserved ability on wages: higher-ability individuals earn more, and since higher-ability men are more desirable marriage partners, this generates positive selection of married men on wages---married men earn more than single men not because of a causal effect of marriage, but because higher-wage men are more likely to be selected into marriage. The wage shock is $\varepsilon_{jt}^W \sim N(0, \sigma_j^W)$.
+
+The wage function parameters---intercepts $\beta_3^{j,E}$, experience returns $\beta_1^{j,E}$ and $\beta_2^{j,E}$, and the unemployment penalty $\beta_4^{j,E}$---are allowed to differ between males and females and by education level. Part-time wages are half of full-time wages.
+
+We assume an unemployed individual receives at most one job offer per period (either full-time or part-time) with probabilities determined by a trinomial logit model that depends on age, education, and prior employment.
+
+In each period, an individual may be unemployed because they did not receive an offer or because they received an offer and chose not to accept it.
+
+\subsection{Terminal Value}
+
+At the terminal period $T$ (age 60), individuals receive a terminal value that captures the present discounted value of remaining lifetime utility from marriage and children:
+\begin{equation}
+TV_j = t_{1,j} \cdot \mathbbm{1}(ed_{spouse} = SC) + t_{2,j} \cdot \mathbbm{1}(ed_{spouse} = CG) + t_{3,j} \cdot \mathbbm{1}(ed_j = SC) + t_{4,j} \cdot \mathbbm{1}(ed_j = CG) + t_{5,j} \cdot \mathbbm{1}(married) + t_{6,j} \cdot N_T
+\label{eq:terminal}
+\end{equation}
+where $t_{5,j}$ captures the terminal value of being married and $t_{6,j}$ captures the terminal value per child, both gender-specific.
+
+\subsection{Model Discussion}
+
+This modeling framework allows us to capture the key empirical patterns documented in Section~\ref{sec:facts}. First, by making meeting probabilities depend on the population distributions by education and gender, the model generates marriage market mismatch when educational distributions diverge across cohorts. College-educated women face lower meeting probabilities with college-educated men when the supply of such men declines relative to demand, naturally generating the declining marriage rates observed in Figure~\ref{fig:marriage_rates}.
+
+Second, the participation constraints in equation~\eqref{eq:participation} ensure that both partners must prefer marriage to remaining single. Combined with the education-specific marriage taste parameters in equation~\eqref{eq:marriage_taste}, this captures why women do not simply ``marry down'' despite educational mismatch, consistent with the stable assortative mating patterns in Figure~\ref{fig:assortative_mating}.
+
+Third, by allowing fertility utility to differ by marital status ($\alpha_{3,j}^s$ for singles versus $\alpha_{3,j}^M$ for married individuals), the model can replicate the large and stable fertility gap by marital status shown in Figure~\ref{fig:fertility_by_marriage}. The childcare affordability constraint further shapes employment and fertility decisions: women with young children and low wages may be endogenously constrained out of employment, affecting both the gains from marriage and fertility timing.
+
+Finally, the wage process (equation~\ref{eq:wage}) that varies by education, gender, and unobserved ability allows the model to capture the changing economic returns to education that make college-educated partners increasingly valuable in the marriage market, as documented in Figures~\ref{fig:wages_husbands} and~\ref{fig:wage_ratio}. The ability-based selection mechanism generates the empirical pattern that married men earn more than single men within education groups.
+
+\section{Solution and Estimation} \label{sec:estimation}
+
+We solve the model by backward recursion from age 60 to age 18 (the entry age for HS individuals). The backward solution uses 30 random draws per state to approximate expectations over future shocks (wage shocks, match quality shocks, partner characteristics). We estimate the model on the 1960 cohort as the baseline (individuals born 1958 to 1962), restricting the sample to white civilian adults over age 21. We use the Method of Simulated Moments (MSM). For each parameter vector, we solve the dynamic program and simulate forward life-cycle histories for 5,000 men and 5,000 women, drawing job offers, wage shocks, match-quality shocks, and partner offers.
+
+We construct moments from the simulated and actual data and choose parameters to minimize the distance between them using a diagonal weighting matrix based on estimated moment variances.
+
+We then take the estimated parameters from the 1960 cohort and change the education distribution and the wage structure to match the 1985 cohort. This allows us to decompose the role of education distributions and labor-market conditions in explaining changes in marriage and fertility.
+
+\subsection{Targeted Moments}
+
+The model is estimated to match the following moments across five age groups (22--26, 27--31, 32--36, 37--41, 42--46), by three education levels, and by gender:
+
+\begin{itemize}
+    \item Marriage rates by education, gender, and age group (30 moments)
+    \item Divorce rates by education, gender, and age group (30 moments)
+    \item Wages by education, gender, marital status, and age group (60 moments)
+    \item Employment rates (full-time and part-time) by education, gender, marital status, and age group (120 moments)
+    \item Fertility (number of children) by education, marital status, and age group (30 moments)
+    \item Childlessness rates by education, marital status, and age group (30 moments)
+    \item Assortative mating matrices for men and women at ages 42--46 (18 moments)
+\end{itemize}
+
+\subsection{Model Fit}
+
+[Section to be completed with estimation results.]
+
+The model successfully replicates the key patterns documented in Section~\ref{sec:facts}. Detailed parameter estimates and fit statistics are available in the Appendix. Having established that the model captures observed marriage and fertility patterns, we now use it to conduct counterfactual policy experiments.
+
+\section{Counterfactual Policy Experiments} \label{sec:counterfactuals}
+
+[Section to be completed]
+
+\section{Conclusion} \label{sec:conclusion}
+
+[Section to be completed]
+
+\bibliographystyle{aer}
+\bibliography{references}
+
+\end{document}

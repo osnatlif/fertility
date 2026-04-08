@@ -6,12 +6,16 @@ cdef extern from "randn.cc":
     double randn(double mu, double sigma)
     double uniform()
 from draw_husband cimport Husband
+from cohorts import cohort
 
-# wives = np.loadtxt("wives.out")
+# load female education distribution by age: columns are age, P(HS), P(SC), P(CG+)
+_edu_dist_f = np.loadtxt("input/education_dist_f" + cohort + ".txt")
 
 cdef class Wife:
     def get_age(self):
         return self.age
+    def set_age(self, int value):
+        self.age = value
     def get_schooling(self):
         return self.schooling
     def get_on_welfare(self):
@@ -28,24 +32,18 @@ cdef class Wife:
         self.divorce = state
     def __init__(self):
         # following are indicators for the wife's schooling they have values of 0/1 and only one of them could be 1
-        self.hsd = 1
-        self.hsg = 0
+        self.hs = 1
         self.sc = 0
         self.cg = 0
-        self.pc = 0
         self.schooling = 0    # wife schooling, can get values of 0-4
         self.years_of_schooling = 11
-        self.exp = 0    # wife experience
-        self.exp_2 = 0  # wife experience aquared
         self.emp = 0    # wife employment state !!!
         self.capacity = 0
         self.married = 0
         self.divorce = 0
         self.age = 17
         self.kids = 0      # wife's kids
-        self.health = 0
         self.preg = 0
-        self.home_time_ar = 1
         self.ability_value = 0
         self.ability_i = 0
         self.mother_educ = 0
@@ -56,49 +54,33 @@ cdef class Wife:
         self.age_first_child = 0
         self.age_second_child = 0
         self.age_third_child = 0
+        self.kb5 = 0
         self.match_quality = 0
     def __str__(self):
-        return "Wife\n\tyears of Schooling: " + str(self.years_of_schooling) + "\n\tSchooling: " + str(self.schooling) + "\n\tSchooling Map: " + str(self.hsd) + "," + str(self.hsg) + \
-               "," + str(self.sc) + "," + str(self.cg) + "," + str(self.pc) + \
-               "\n\tExperience: " + str(self.exp) + "\n\tAbility: " + str(self.ability_i) + "," + str(self.ability_value) + \
+        return "Wife\n\tyears of Schooling: " + str(self.years_of_schooling) + "\n\tSchooling: " + str(self.schooling) + "\n\tSchooling Map: " + str(self.hs) + \
+               "," + str(self.sc) + "," + str(self.cg) + \
+               "\n\tAbility: " + str(self.ability_i) + "," + str(self.ability_value) + \
                "\n\tAge: " + str(self.age)  + "\n\tKids: " + str(self.kids)+ "\n\tage first kid: " + str(self.age_first_child) + \
                "\tage second child: " + str(self.age_second_child) + "\tage third child: " + str(self.age_third_child) + \
-               "\n\tHealth: " + str(self.health)+ "\n\tDivorce: " + str(self.divorce)+  \
+               "\n\tDivorce: " + str(self.divorce)+  \
                "\n\tPregnant: " + str(self.preg) + "\n\tmother education: " + str(self.mother_educ) + "\n\tmother marital: " + str(self.mother_marital) + \
                "\n\tCapacity: " + str(self.capacity) + "\n\tEmployment: " + str(self.emp)
 
 
 cpdef update_wife_schooling(Wife wife):
-    if wife.schooling == 0:
-        wife.hsd = 1
-        wife.hsg = 0
+    # 3 education levels: 0=HS (high school or less), 1=SC (some college), 2=CG+ (college graduate+)
+    if wife.schooling == 0:  # HS
+        wife.hs = 1
         wife.sc = 0
         wife.cg = 0
-        wife.pc = 0
-    elif wife.schooling == 1:
-        wife.hsd = 0
-        wife.hsg = 1
-        wife.sc = 0
-        wife.cg = 0
-        wife.pc = 0
-    elif wife.schooling == 2:
-        wife.hsd = 0
-        wife.hsg = 0
+    elif wife.schooling == 1:  # SC
+        wife.hs = 0
         wife.sc = 1
         wife.cg = 0
-        wife.pc = 0
-    elif wife.schooling == 3:
-        wife.hsd = 0
-        wife.hsg = 0
+    elif wife.schooling == 2:  # CG+
+        wife.hs = 0
         wife.sc = 0
         wife.cg = 1
-        wife.pc = 0
-    elif wife.schooling == 4:
-        wife.hsd = 0
-        wife.hsg = 0
-        wife.sc = 0
-        wife.cg = 0
-        wife.pc = 1
     else:
         assert False
 
@@ -112,8 +94,8 @@ cpdef update_ability_forward(Wife wife):
     cdef double prob_high_ability
     cdef double prob_medium_ability
     cdef double temp
-    temp_high_ability = p.ab_high1
-    temp_medium_ability = p.ab_medium1
+    temp_high_ability = p.ab_high
+    temp_medium_ability = p.ab_medium
     prob_high_ability = cmath.exp(temp_high_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
     prob_medium_ability = cmath.exp(temp_medium_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
     temp = uniform()
@@ -136,57 +118,21 @@ cpdef Wife draw_wife(Husband husband):
     cdef Wife result = Wife()
     result.age = husband.age
     update_ability_forward(result)
-
-    # update ability by mother education and marital status
-    cdef double temp
-    cdef double temp1
-    cdef double match_cg
-    cdef double match_sc
-    if husband.age < 18:
-        result.schooling = 0   # husband hsd
-    elif husband.age < 20:
-        result.schooling = 1   # husband hsg
+    # draw wife education from female education distribution by age
+    cdef int age_idx = <int>result.age - 18
+    cdef double prob_hs = _edu_dist_f[age_idx, 1]
+    cdef double prob_sc = _edu_dist_f[age_idx, 2]
+    cdef double temp = uniform()
+    if temp < prob_hs:
+        result.schooling = 0  # HS
+    elif temp < prob_hs + prob_sc:
+        result.schooling = 1  # SC
     else:
-        if husband.schooling < 2:  # wife is HSD or HSG
-            match_cg = cmath.exp(p.omega6_h + p.omega8_h) / (
-                1.0 + cmath.exp(p.omega6_h + p.omega8_h) + cmath.exp(p.omega9_h + p.omega10_h))  # probability of meeting cg if hs
-            match_sc = cmath.exp(p.omega9_h + p.omega10_h) / (
-                1.0 + cmath.exp(p.omega6_h + p.omega8_h) + cmath.exp(p.omega9_h + p.omega10_h))  # probability of meeting sc if hs
-            # match_hsg = 1.0 / (1.0 + np.exp(p.omega4_w + p.omega6_w) + np.exp(p.omega7_w + p.omega8_w))  # probability of meeting hs if hs
-        elif husband.schooling == 2:
-            match_cg = cmath.exp(p.omega6_h + p.omega7_h) / (
-                1.0 + cmath.exp(p.omega6_h + p.omega7_h) + cmath.exp(p.omega9_h))  # probability of meeting cg if sc
-            match_sc = cmath.exp(p.omega9_h) / (
-                1.0 + cmath.exp(p.omega6_h + p.omega7_h) + cmath.exp(p.omega9_h))  # probability of meeting sc if sc
-            # match_hsg = 1.0 / (1.0 + np.exp(p.omega4_w + p.omega5_w) + np.exp(p.omega7_w))  # probability of meeting hs if sc
-        elif husband.schooling > 2:
-            match_cg = cmath.exp(p.omega6_h) / (1.0 + cmath.exp(p.omega6_h) + cmath.exp(p.omega9_h))  # probability of meeting cg if cg
-            match_sc = cmath.exp(p.omega9_h) / (1.0 + cmath.exp(p.omega6_h) + cmath.exp(p.omega9_h))  # probability of meeting sc if cg
-            # match_hsg = 1.0 / (1.0 + np.exp(p.omega4_w) + np.exp(p.omega7_w))  # probability of meeting hs if cg
-        # draw husband schooling
-        temp = uniform()
-        if temp < match_cg:
-            temp1 = uniform()
-            if temp1 < 0.9:  # fix to right number
-                result.schooling = 3  # cg
-            else:
-                result.schooling = 4  # pc
-        elif temp < match_cg + match_sc:
-            result.schooling = 2  # sc
-        else:
-            temp1 = uniform()
-            if temp1 < 0.8:  # fix to right number
-                result.schooling = 1  # hsg
-            else:
-                result.schooling = 0  # hsd
+        result.schooling = 2  # CG+
     update_wife_schooling(result)
-    if result.age >= c.AGE_VALUES[result.schooling]:
-        result.exp = result.age - c.AGE_VALUES[result.schooling]
-    else:
-        result.exp = 0  # if husband is still at school, experience would be zero
-    if result.age > 24 :
+    if result.age > 24:
         result.emp = 1
-        result.capacity =1
+        result.capacity = 1
 
     return result
 
@@ -196,18 +142,19 @@ cpdef Wife draw_wife_back(Husband husband):
     cdef Wife result = Wife()
     result.age = husband.age
     result.ability_i = 1
-    result.ability_value = c.normal_vector[1] * p.sigma_ability_w    # update ability by mother education and marital status
-    if husband.age < 18:
-        result.schooling = 0  # husband hsd
-    elif husband.age < 20:
-        result.schooling = 1  # husband hsg
+    result.ability_value = c.normal_vector[1] * p.sigma_ability_w
+    # draw wife education from age-specific female population distribution (same as forward)
+    cdef int age_idx = min(<int>result.age - 18, <int>_edu_dist_f.shape[0] - 1)
+    cdef double prob_hs = _edu_dist_f[age_idx, 1]
+    cdef double prob_sc = _edu_dist_f[age_idx, 2]
+    cdef double temp = uniform()
+    if temp < prob_hs:
+        result.schooling = 0  # HS
+    elif temp < prob_hs + prob_sc:
+        result.schooling = 1  # SC
     else:
-        result. schooling =  husband.schooling
+        result.schooling = 2  # CG+
     update_wife_schooling(result)
-    if result.age >= c.AGE_VALUES[result.schooling]:
-        result.exp = result.age - c.AGE_VALUES[result.schooling]
-    else:
-        result.exp = 0  # if husband is still at school, experience would be zero
     if result.age > 24 :
         result.emp = 1
         result.capacity =1

@@ -3,257 +3,407 @@ import constant_parameters as c
 from tabulate import tabulate
 from cohorts import cohort
 
+N_EDU = c.school_size_f    # 3
+N_AG = c.N_AGE_GROUPS_f    # 5
+N_AGES = 38                # ages 18-55 (index 0=age18, index 37=age55)
 
-class ActualMoments:
-    def __init__(self):
-        self.actual_married_moments_w = np.loadtxt("input/married_w"+cohort+".txt")
-        self.actual_married_moments_h = np.loadtxt("input/married_h"+cohort+".txt")
-        self.actual_unmarried_moments_w = np.loadtxt("input/unmarried_w"+cohort+".txt")
-        self.actual_unmarried_moments_h = np.loadtxt("input/unmarried_h"+cohort+".txt")
-        self.actual_marr_divorce_moments = np.loadtxt("input/marr_divorce"+cohort+".txt")
-        self.actual_school_moments_w = np.loadtxt("input/school_w"+cohort+".txt")
-        self.actual_school_moments_h = np.loadtxt("input/school_h"+cohort+".txt")
-        self.actual_assortative_moments = np.loadtxt("input/assortative"+cohort+".txt")
-        self.actual_kids_distribution_moments_m = np.loadtxt("input/kids_distribution_m" + cohort + ".txt")
-        self.actual_kids_distribution_moments_um = np.loadtxt("input/kids_distribution_um" + cohort + ".txt")
+# age group definitions: (start_age, end_age) inclusive
+AGE_GROUPS = [(22, 26), (27, 31), (32, 36), (37, 41), (42, 46)]
+AG_LABELS = ["22-26", "27-31", "32-36", "37-41", "42-46"]
 
-class Moments:
-    fertility_moments_single = np.zeros((c.max_period_f, c.kids_size_f))
-    fertility_moments_married = np.zeros((c.max_period_f, c.kids_size_f))
-    fertility_moments = np.zeros((c.max_period_f, c.kids_size_f))
-    school_moments_wife = np.zeros((c.max_school_f+1, c.school_size_f))
-    school_moments_husband = np.zeros((c.max_school_f+1, c.school_size_f))
-    emp_moments_wife_single = np.zeros((c.max_period_f, 3))  # 0 - unemployed, 1 - part time, 2 - full time
-    emp_moments_husband_single = np.zeros((c.max_period_f, 3))  # 0 - unemployed, 1 - part time, 2 - full time
-    emp_moments_wife_married = np.zeros((c.max_period_f, 3))  # 0 - unemployed, 1 - part time, 2 - full time
-    emp_moments_husband_married = np.zeros((c.max_period_f, 3))  # 0 - unemployed, 1 - part time, 2 - full time
-    wage_moments_wife_single = np.zeros(c.max_period_f)
-    wage_counter_wife_single = np.zeros(c.max_period_f)
-    wage_moments_husband_single = np.zeros(c.max_period_f)
-    wage_counter_husband_single = np.zeros(c.max_period_f)
-    wage_moments_wife_married = np.zeros(c.max_period_f)
-    wage_counter_wife_married = np.zeros(c.max_period_f)
-    wage_moments_husband_married = np.zeros(c.max_period_f)
-    wage_counter_husband_married = np.zeros(c.max_period_f)
-    marriage_moments_w = np.zeros(c.max_period_f)
-    divorce_moments_w = np.zeros(c.max_period_f)
-    marriage_moments_h = np.zeros(c.max_period_f)
-    divorce_moments_h = np.zeros(c.max_period_f)
-    assortative_moments = np.zeros((c.school_size_f, c.school_size_f))
-    assortative_counter = np.zeros(c.school_size_f)
-    welfare_moments_employed = np.zeros(c.max_period_f)
-    welfare_counter_employed = np.zeros(c.max_period_f)
-    welfare_moments_unemployed = np.zeros(c.max_period_f)
-    welfare_counter_unemployed = np.zeros(c.max_period_f)
 
-def decimate(arr, first_row, last_row, avg_size):
-    cols = arr.shape[1]
-    rows = arr.shape[0]
-    if first_row < 0 or first_row >= last_row:
-        raise ValueError("decimate: invalid first row ", first_row)
-    if last_row >= rows:
-        raise ValueError("decimate: invalid last row ", last_row, "size", rows)
-    result = np.zeros((int((last_row - first_row + 1)/avg_size), cols))
-    row_sum = np.zeros(cols)
-    result_i = 0
-    for i in range(first_row, last_row+1):
-        row_sum += arr[i, :]
-        if (i - first_row + 1) % avg_size == 0:
-            result[result_i, :] = row_sum/avg_size
-            row_sum = np.zeros(cols)
-            result_i += 1
+def age_to_idx(age):
+    """Convert age to annual moment index (0=age18, 37=age55)."""
+    return age - 18
 
+
+def aggregate_to_age_groups(annual_data):
+    """Aggregate annual (N_EDU, N_AGES) data into (N_EDU, N_AG) by summing ages in each group."""
+    result = np.zeros((N_EDU, N_AG))
+    for ag_idx, (start, end) in enumerate(AGE_GROUPS):
+        idx_start = age_to_idx(start)
+        idx_end = age_to_idx(end) + 1   # exclusive
+        result[:, ag_idx] = annual_data[:, idx_start:idx_end].sum(axis=1)
     return result
 
 
+def aggregate_to_age_groups_3d(annual_data):
+    """Aggregate annual (N_EDU, N_AGES, 3) data into (N_EDU, N_AG, 3)."""
+    result = np.zeros((N_EDU, N_AG, 3))
+    for ag_idx, (start, end) in enumerate(AGE_GROUPS):
+        idx_start = age_to_idx(start)
+        idx_end = age_to_idx(end) + 1
+        result[:, ag_idx, :] = annual_data[:, idx_start:idx_end, :].sum(axis=1)
+    return result
+
+
+class ActualMoments:
+    def __init__(self):
+        # employment/wage: columns are educ, age_group, full_time, part_time, wage, welfare
+        self.married_w = np.loadtxt("input/married_w" + cohort + ".txt")
+        self.married_h = np.loadtxt("input/married_h" + cohort + ".txt")
+        self.unmarried_w = np.loadtxt("input/unmarried_w" + cohort + ".txt")
+        self.unmarried_h = np.loadtxt("input/unmarried_h" + cohort + ".txt")
+        # marriage/divorce: columns are educ, age_group, married, divorce
+        self.marr_divorce_w = np.loadtxt("input/marr_divorce_w" + cohort + ".txt")
+        self.marr_divorce_h = np.loadtxt("input/marr_divorce_h" + cohort + ".txt")
+        # fertility: columns are educ, age_group, frever, childless
+        self.fertility_married = np.loadtxt("input/fertility_married" + cohort + ".txt")
+        self.fertility_unmarried = np.loadtxt("input/fertility_unmarried" + cohort + ".txt")
+        # assortative: 3x3 matrix (own_edu x spouse_edu), ages 42-46 only
+        self.assortative_w = np.loadtxt("input/assortative_w" + cohort + ".txt")  # (3, 3)
+        self.assortative_h = np.loadtxt("input/assortative_h" + cohort + ".txt")  # (3, 3)
+
+    def get_2d(self, data, col):
+        """Reshape a column from 15-row file into (N_EDU, N_AG) array."""
+        return data[:, col].reshape(N_EDU, N_AG)
+
+
+class Moments:
+    def __init__(self):
+        # All moment arrays are stored annually: (edu, age_idx) where age_idx = age - 18
+        # employment: (edu, age_idx, 3) where dim 2 = [unemployed, part_time, full_time]
+        self.emp_wife_married = np.zeros((N_EDU, N_AGES, 3))
+        self.emp_husband_married = np.zeros((N_EDU, N_AGES, 3))
+        self.emp_wife_single = np.zeros((N_EDU, N_AGES, 3))
+        self.emp_husband_single = np.zeros((N_EDU, N_AGES, 3))
+        # wages: (edu, age_idx)
+        self.wage_wife_married = np.zeros((N_EDU, N_AGES))
+        self.wage_counter_wife_married = np.zeros((N_EDU, N_AGES))
+        self.wage_husband_married = np.zeros((N_EDU, N_AGES))
+        self.wage_counter_husband_married = np.zeros((N_EDU, N_AGES))
+        self.wage_wife_single = np.zeros((N_EDU, N_AGES))
+        self.wage_counter_wife_single = np.zeros((N_EDU, N_AGES))
+        self.wage_husband_single = np.zeros((N_EDU, N_AGES))
+        self.wage_counter_husband_single = np.zeros((N_EDU, N_AGES))
+        # marriage/divorce by gender: (edu, age_idx)
+        self.marriage_w = np.zeros((N_EDU, N_AGES))
+        self.divorce_w = np.zeros((N_EDU, N_AGES))
+        self.marriage_h = np.zeros((N_EDU, N_AGES))
+        self.divorce_h = np.zeros((N_EDU, N_AGES))
+        # total count per (edu, age_idx) for denominator
+        self.total_w = np.zeros((N_EDU, N_AGES))
+        self.total_h = np.zeros((N_EDU, N_AGES))
+        # fertility: (edu, age_idx)
+        self.fertility_total_married = np.zeros((N_EDU, N_AGES))
+        self.fertility_count_married = np.zeros((N_EDU, N_AGES))
+        self.childless_married = np.zeros((N_EDU, N_AGES))
+        self.fertility_total_unmarried = np.zeros((N_EDU, N_AGES))
+        self.fertility_count_unmarried = np.zeros((N_EDU, N_AGES))
+        self.childless_unmarried = np.zeros((N_EDU, N_AGES))
+        # assortative: (own_edu, spouse_edu) - only for ages 42-46
+        self.assortative_w = np.zeros((N_EDU, N_EDU))
+        self.assortative_counter_w = np.zeros(N_EDU)
+        self.assortative_h = np.zeros((N_EDU, N_EDU))
+        self.assortative_counter_h = np.zeros(N_EDU)
+
 
 def calculate_moments(m, display_moments):
-    # calculate employment moments
-    # estimated_married_moments_w = np.zeros((c.max_period_f, 8))
-    # age_arr = np.arange(17, 17+c.max_period_f).reshape((1, c.max_period_f))
-    # print(age_arr)
     actual = ActualMoments()
-    if c.cohort_f == 1960:
-        max_period_by_cohort = c.max_1960
-    elif c.cohort_f == 1970:
-        max_period_by_cohort = c.max_1970
-    elif c.cohort_f == 1980:
-        max_period_by_cohort = c.max_1980
-    elif c.cohort_f == 1990 or c.cohort_f == 2000 or c.cohort_f == 2010:
-        max_period_by_cohort = c.max_1990
+    edu_labels = ["HS", "SC", "CG+"]
 
+    # aggregate annual moments into age groups for comparison with actual data
+    emp_wm = aggregate_to_age_groups_3d(m.emp_wife_married)
+    emp_hm = aggregate_to_age_groups_3d(m.emp_husband_married)
+    emp_ws = aggregate_to_age_groups_3d(m.emp_wife_single)
+    emp_hs = aggregate_to_age_groups_3d(m.emp_husband_single)
+    wage_wm = aggregate_to_age_groups(m.wage_wife_married)
+    wage_cnt_wm = aggregate_to_age_groups(m.wage_counter_wife_married)
+    wage_hm = aggregate_to_age_groups(m.wage_husband_married)
+    wage_cnt_hm = aggregate_to_age_groups(m.wage_counter_husband_married)
+    wage_ws = aggregate_to_age_groups(m.wage_wife_single)
+    wage_cnt_ws = aggregate_to_age_groups(m.wage_counter_wife_single)
+    wage_hs_ag = aggregate_to_age_groups(m.wage_husband_single)
+    wage_cnt_hs = aggregate_to_age_groups(m.wage_counter_husband_single)
+    marriage_w = aggregate_to_age_groups(m.marriage_w)
+    divorce_w = aggregate_to_age_groups(m.divorce_w)
+    marriage_h = aggregate_to_age_groups(m.marriage_h)
+    divorce_h = aggregate_to_age_groups(m.divorce_h)
+    total_w = aggregate_to_age_groups(m.total_w)
+    total_h = aggregate_to_age_groups(m.total_h)
+    fert_tot_m = aggregate_to_age_groups(m.fertility_total_married)
+    fert_cnt_m = aggregate_to_age_groups(m.fertility_count_married)
+    childless_m = aggregate_to_age_groups(m.childless_married)
+    fert_tot_u = aggregate_to_age_groups(m.fertility_total_unmarried)
+    fert_cnt_u = aggregate_to_age_groups(m.fertility_count_unmarried)
+    childless_u = aggregate_to_age_groups(m.childless_unmarried)
 
+    # ========== DIAGNOSTIC: annual data for women ==========
+    print("\n===== DIAGNOSTIC: ANNUAL WOMEN (all edu levels) =====")
+    print("Age  | HS:Total  HS:Marr  HS:Div  HS:Kids | SC:Total  SC:Marr  SC:Div  SC:Kids | CG:Total  CG:Marr  CG:Div  CG:Kids")
+    for age in range(18, 56):
+        idx = age - 18
+        parts = []
+        for e in range(N_EDU):
+            tot = m.total_w[e, idx]
+            marr = m.marriage_w[e, idx] / tot if tot > 0 else 0
+            div = m.divorce_w[e, idx] / tot if tot > 0 else 0
+            fert_cnt = m.fertility_count_married[e, idx] + m.fertility_count_unmarried[e, idx]
+            fert_tot = m.fertility_total_married[e, idx] + m.fertility_total_unmarried[e, idx]
+            kids = fert_tot / fert_cnt if fert_cnt > 0 else 0
+            parts.append(f"{tot:7.0f}  {marr:6.2f}  {div:5.2f}  {kids:6.2f}")
+        print(f" {age}  | {'  | '.join(parts)}")
 
-    age_group_description = [ "25-29", "30-34", "35-39", "40-44", "45-49"]
-    age_title = np.array([age_group_description]).T
-    #    MARRIED WOMEN ####
-    age_arr = np.arange(17, 17+max_period_by_cohort)
-    temp1 = m.wage_moments_wife_married/m.wage_counter_wife_married
-    temp2 = (m.emp_moments_wife_married.T/m.marriage_moments_w).T
-    estimated_married_moments_w = np.c_[age_arr, temp1[0:max_period_by_cohort], temp2[0:max_period_by_cohort,[1, 2]],
-                                        actual.actual_married_moments_w[0:max_period_by_cohort,[5, 7, 6]]]
+    print("\n===== DIAGNOSTIC: ANNUAL MEN (all edu levels) =====")
+    print("Age  | HS:Total  HS:Marr  HS:Div  | SC:Total  SC:Marr  SC:Div  | CG:Total  CG:Marr  CG:Div")
+    for age in range(18, 56):
+        idx = age - 18
+        parts = []
+        for e in range(N_EDU):
+            tot = m.total_h[e, idx]
+            marr = m.marriage_h[e, idx] / tot if tot > 0 else 0
+            div = m.divorce_h[e, idx] / tot if tot > 0 else 0
+            parts.append(f"{tot:7.0f}  {marr:6.2f}  {div:5.2f}")
+        print(f" {age}  | {'  | '.join(parts)}")
 
-    temp3 = decimate(estimated_married_moments_w, 8, max_period_by_cohort-1, 5)
-    mse_wage_wife_married = np.square(np.subtract(temp3[:,1]/1000,temp3[:,4]/1000)).mean()
-    mse_emp_wife_married = np.square(np.subtract(100*temp3[:,[2,3]],100*temp3[:,[5,6]])).mean()
-    headers = ["Age", "Fitted: Wage", "part", "full", "Actual: Wage",  "part", "full"]
-    #table = tabulate(estimated_married_moments_w[[8, 13 ,18 ,23, 28], :], headers, floatfmt=".2f", tablefmt="simple")
-    table = tabulate(temp3, headers, floatfmt=".2f", tablefmt="simple")
-    print(" married women moments")
-    print(table)
-    #    MARRIED MEN ####
-    temp1 = m.wage_moments_husband_married / m.wage_counter_husband_married
-    temp2 = (m.emp_moments_husband_married.T / m.marriage_moments_h).T
-    estimated_married_moments_h = np.c_[age_arr, temp1[0:max_period_by_cohort], temp2[0:max_period_by_cohort, [1, 2]],
-                                        actual.actual_married_moments_h[0:max_period_by_cohort, [5, 7, 6]]]
+    # ========== MARRIED WOMEN: employment + wage ==========
+    print("\n===== MARRIED WOMEN =====")
+    mse_wage_wife_married = 0.0
+    mse_emp_wife_married = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Wage:Fit", "Wage:Act", "PT:Fit", "PT:Act", "FT:Fit", "FT:Act"]
+        rows = []
+        for ag in range(N_AG):
+            fit_wage = wage_wm[e, ag] / wage_cnt_wm[e, ag] if wage_cnt_wm[e, ag] > 0 else 0
+            married_count = marriage_w[e, ag]
+            fit_part = emp_wm[e, ag, 1] / married_count if married_count > 0 else 0
+            fit_full = emp_wm[e, ag, 2] / married_count if married_count > 0 else 0
+            act_row = e * N_AG + ag
+            act_wage = actual.married_w[act_row, 4]
+            act_full = actual.married_w[act_row, 2]
+            act_part = actual.married_w[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_wage, act_wage, fit_part, act_part, fit_full, act_full])
+            mse_wage_wife_married += (fit_wage/1000 - act_wage/1000)**2
+            mse_emp_wife_married += (100*fit_part - 100*act_part)**2
+            mse_emp_wife_married += (100*fit_full - 100*act_full)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_wage_wife_married /= (N_EDU * N_AG)
+    mse_emp_wife_married /= (N_EDU * N_AG * 2)
 
-    temp3 = decimate(estimated_married_moments_h, 8, max_period_by_cohort-1, 5)
-    mse_wage_husband_married = np.square(np.subtract(temp3[:,1]/1000,temp3[:,4]/1000)).mean()
-    mse_emp_husband_married = np.square(np.subtract(100*temp3[:,[2,3]],100*temp3[:,[5,6]])).mean()
-    table = tabulate(temp3, headers, floatfmt=".2f", tablefmt="simple")
-    print(" married men moments")
-    print(table)
-    #    MARRIED COUPLE CHILDREN #########################
-    age_arr = np.arange(20, 41)
-    temp = (m.fertility_moments_married.T / m.marriage_moments_w).T
-    estimated_married_kids_moments = np.c_[age_arr, temp[3:24, :],
-                                           actual.actual_kids_distribution_moments_m[0:21, 3:7]]
-    temp3 = decimate(estimated_married_kids_moments, 5, 20, 5)
+    # ========== MARRIED MEN: employment + wage ==========
+    print("\n===== MARRIED MEN =====")
+    mse_wage_husband_married = 0.0
+    mse_emp_husband_married = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Wage:Fit", "Wage:Act", "PT:Fit", "PT:Act", "FT:Fit", "FT:Act"]
+        rows = []
+        for ag in range(N_AG):
+            fit_wage = wage_hm[e, ag] / wage_cnt_hm[e, ag] if wage_cnt_hm[e, ag] > 0 else 0
+            married_count = marriage_h[e, ag]
+            fit_part = emp_hm[e, ag, 1] / married_count if married_count > 0 else 0
+            fit_full = emp_hm[e, ag, 2] / married_count if married_count > 0 else 0
+            act_row = e * N_AG + ag
+            act_wage = actual.married_h[act_row, 4]
+            act_full = actual.married_h[act_row, 2]
+            act_part = actual.married_h[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_wage, act_wage, fit_part, act_part, fit_full, act_full])
+            mse_wage_husband_married += (fit_wage/1000 - act_wage/1000)**2
+            mse_emp_husband_married += (100*fit_part - 100*act_part)**2
+            mse_emp_husband_married += (100*fit_full - 100*act_full)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_wage_husband_married /= (N_EDU * N_AG)
+    mse_emp_husband_married /= (N_EDU * N_AG * 2)
 
-    mse_kids_married = np.square(np.subtract(100*temp3[:, [1, 2, 3, 4]], 100*temp3[:, [5, 6, 7, 8]])).mean()
-    headers = ["Age", "Fitted: No-Kids", "1-Kid", "2-Kids", "3+Kids", "Actual: No-Kids", "1-Kid", "2-Kids", "3+Kids" ]
-    #table = tabulate(estimated_married_kids_moments[[5, 10, 15], ], headers, floatfmt=".2f", tablefmt="simple")
-    table = tabulate(temp3, headers, floatfmt=".2f", tablefmt="simple")
-    print(" married couple children moments")
-    print(table)
+    # ========== SINGLE WOMEN: employment + wage ==========
+    print("\n===== SINGLE WOMEN =====")
+    mse_wage_wife_single = 0.0
+    mse_emp_wife_single = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Wage:Fit", "Wage:Act", "PT:Fit", "PT:Act", "FT:Fit", "FT:Act"]
+        rows = []
+        for ag in range(N_AG):
+            fit_wage = wage_ws[e, ag] / wage_cnt_ws[e, ag] if wage_cnt_ws[e, ag] > 0 else 0
+            single_count = total_w[e, ag] - marriage_w[e, ag]
+            fit_part = emp_ws[e, ag, 1] / single_count if single_count > 0 else 0
+            fit_full = emp_ws[e, ag, 2] / single_count if single_count > 0 else 0
+            act_row = e * N_AG + ag
+            act_wage = actual.unmarried_w[act_row, 4]
+            act_full = actual.unmarried_w[act_row, 2]
+            act_part = actual.unmarried_w[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_wage, act_wage, fit_part, act_part, fit_full, act_full])
+            mse_wage_wife_single += (fit_wage/1000 - act_wage/1000)**2
+            mse_emp_wife_single += (100*fit_part - 100*act_part)**2
+            mse_emp_wife_single += (100*fit_full - 100*act_full)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_wage_wife_single /= (N_EDU * N_AG)
+    mse_emp_wife_single /= (N_EDU * N_AG * 2)
 
-    ######## TOTAL FERTILITY ########
-    #age_arr = np.arange(20, 41)
-    #temp = (m.fertility_moments.T / c.DRAW_F).T
-    #temp1 = np.c_[age_arr, temp[3:24, :]]
-    #table = tabulate(temp1, headers, floatfmt=".2f", tablefmt="simple")
-    #print(" total children moments")
-    #print(table)
+    # ========== SINGLE MEN: employment + wage ==========
+    print("\n===== SINGLE MEN =====")
+    mse_wage_husband_single = 0.0
+    mse_emp_husband_single = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Wage:Fit", "Wage:Act", "PT:Fit", "PT:Act", "FT:Fit", "FT:Act"]
+        rows = []
+        for ag in range(N_AG):
+            fit_wage = wage_hs_ag[e, ag] / wage_cnt_hs[e, ag] if wage_cnt_hs[e, ag] > 0 else 0
+            single_count = total_h[e, ag] - marriage_h[e, ag]
+            fit_part = emp_hs[e, ag, 1] / single_count if single_count > 0 else 0
+            fit_full = emp_hs[e, ag, 2] / single_count if single_count > 0 else 0
+            act_row = e * N_AG + ag
+            act_wage = actual.unmarried_h[act_row, 4]
+            act_full = actual.unmarried_h[act_row, 2]
+            act_part = actual.unmarried_h[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_wage, act_wage, fit_part, act_part, fit_full, act_full])
+            mse_wage_husband_single += (fit_wage/1000 - act_wage/1000)**2
+            mse_emp_husband_single += (100*fit_part - 100*act_part)**2
+            mse_emp_husband_single += (100*fit_full - 100*act_full)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_wage_husband_single /= (N_EDU * N_AG)
+    mse_emp_husband_single /= (N_EDU * N_AG * 2)
 
-    ############### SINGLES #####################################################
-    age_arr = np.arange(17, 17+max_period_by_cohort)
-    temp1 = m.wage_moments_wife_single / m.wage_counter_wife_single
-    temp2 = (m.emp_moments_wife_single.T / (c.DRAW_F - m.marriage_moments_w)).T
-    temp3 = m.welfare_moments_employed / m.welfare_counter_employed
-    temp4 = m.welfare_moments_unemployed / m.welfare_counter_unemployed
-    estimated_single_moments_w = np.c_[age_arr, temp1[0:max_period_by_cohort], temp2[0:max_period_by_cohort, [1,2]], temp3[0:max_period_by_cohort], temp4[0:max_period_by_cohort],
-                                        actual.actual_unmarried_moments_w[0:max_period_by_cohort, [5, 7, 6, 8, 9]]]
-    temp5 = decimate(estimated_single_moments_w, 8, max_period_by_cohort-1, 5)
-    mse_wage_wife_single = np.square(np.subtract(temp5[:,1]/1000,temp5[:,6]/1000)).mean()
-    mse_emp_wife_single = np.square(np.subtract(100*temp5[:,[2,3]],100*temp5[:,[7,8]])).mean()
+    # ========== MARRIAGE/DIVORCE WOMEN ==========
+    print("\n===== MARRIAGE/DIVORCE WOMEN =====")
+    mse_marriage_w = 0.0
+    mse_divorce_w = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Marr:Fit", "Marr:Act", "Div:Fit", "Div:Act"]
+        rows = []
+        for ag in range(N_AG):
+            total = total_w[e, ag]
+            fit_marr = marriage_w[e, ag] / total if total > 0 else 0
+            fit_div = divorce_w[e, ag] / total if total > 0 else 0
+            act_row = e * N_AG + ag
+            act_marr = actual.marr_divorce_w[act_row, 2]
+            act_div = actual.marr_divorce_w[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_marr, act_marr, fit_div, act_div])
+            mse_marriage_w += (100*fit_marr - 100*act_marr)**2
+            mse_divorce_w += (100*fit_div - 100*act_div)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_marriage_w /= (N_EDU * N_AG)
+    mse_divorce_w /= (N_EDU * N_AG)
 
-    headers = ["Fitted:Age", "Wage", "part", "full", "welfare-emp", "welfare-unemp","Actual:Wage", "part", "full", "welfare-emp", "welfare-unemp"]
-    #table = tabulate(estimated_single_moments_w[[8, 13 ,18 ,23, 28], :], headers, floatfmt=".2f", tablefmt="simple")
-    table = tabulate(temp5, headers, floatfmt=".2f", tablefmt="simple")
-    print(" single women moments")
-    print(table)
-    #    SINGLE MEN ##################################
-    temp1 = m.wage_moments_husband_single / m.wage_counter_husband_single
-    temp2 = (m.emp_moments_husband_single.T / (c.DRAW_F - m.marriage_moments_h)).T
-    estimated_single_moments_h = np.c_[
-        age_arr, temp1[0:max_period_by_cohort], temp2[0:max_period_by_cohort, [1, 2]],
-        actual.actual_unmarried_moments_h[0:max_period_by_cohort, [5, 7, 6]]]
-    temp5 = decimate(estimated_single_moments_h, 8, max_period_by_cohort-1, 5)
-    mse_wage_husband_single = np.square(np.subtract(temp5[:,1]/1000,temp5[:,4]/1000)).mean()
-    mse_emp_husband_single = np.square(np.subtract(100*temp5[:,[2,3]],100*temp5[:,[5,6]])).mean()
-    headers = ["Fitted:Age", "Wage", "part", "full", "Actual:Wage", "part", "full"]
-    table = tabulate(temp5, headers, floatfmt=".2f", tablefmt="simple")
-    print(" single men moments")
-    print(table)
-    #######    SINGLE WOMEN CHILDREN ###############
-    age_arr = np.arange(20, 41)
-    temp1 = (m.fertility_moments_single.T / (c.DRAW_F - m.marriage_moments_w)).T
-    estimated_single_kids_moments = np.c_[age_arr, temp1[3:24, :],
-                                      actual.actual_kids_distribution_moments_um[0:21,3:7]]
-    temp3 = decimate(estimated_single_kids_moments, 3, 20, 5)
-    mse_kids_unmarried = np.square(np.subtract(100*temp3[:,[1,2,3,4]],100*temp3[:,[5,6,7,8]])).mean()
-    headers = ["Age", "Fitted:No-Kids", "1-Kid", "2-Kids", "3+Kids", "Actual: No-Kids", "1-Kid", "2-Kids", "3+Kids"]
-    #table = tabulate(estimated_single_kids_moments[[5, 10, 15], :], headers, floatfmt=".2f", tablefmt="simple")
-    table = tabulate(temp3, headers, floatfmt=".2f", tablefmt="simple")
-    print(" single women children moments")
-    print(table)
+    # ========== MARRIAGE/DIVORCE MEN ==========
+    print("\n===== MARRIAGE/DIVORCE MEN =====")
+    mse_marriage_h = 0.0
+    mse_divorce_h = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Marr:Fit", "Marr:Act", "Div:Fit", "Div:Act"]
+        rows = []
+        for ag in range(N_AG):
+            total = total_h[e, ag]
+            fit_marr = marriage_h[e, ag] / total if total > 0 else 0
+            fit_div = divorce_h[e, ag] / total if total > 0 else 0
+            act_row = e * N_AG + ag
+            act_marr = actual.marr_divorce_h[act_row, 2]
+            act_div = actual.marr_divorce_h[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_marr, act_marr, fit_div, act_div])
+            mse_marriage_h += (100*fit_marr - 100*act_marr)**2
+            mse_divorce_h += (100*fit_div - 100*act_div)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_marriage_h /= (N_EDU * N_AG)
+    mse_divorce_h /= (N_EDU * N_AG)
 
-    ############ WIFE  MARRIED AND DIVORCE MOMENTS ######################################################################################
-    age_arr_1970 = np.arange(17, 17+max_period_by_cohort)
-    estimated_marr_divorce_moments = np.c_[age_arr_1970, (m.marriage_moments_w.T[0:max_period_by_cohort] / c.DRAW_F),
-             (m.divorce_moments_w.T[0:max_period_by_cohort] / c.DRAW_F), actual.actual_marr_divorce_moments[0:max_period_by_cohort, 3:5]]
+    # ========== FERTILITY MARRIED ==========
+    print("\n===== FERTILITY MARRIED =====")
+    mse_fertility_married = 0.0
+    mse_childless_married = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Fert:Fit", "Fert:Act", "Chless:Fit", "Chless:Act"]
+        rows = []
+        for ag in range(N_AG):
+            count = fert_cnt_m[e, ag]
+            fit_frever = fert_tot_m[e, ag] / count if count > 0 else 0
+            fit_childless = childless_m[e, ag] / count if count > 0 else 0
+            act_row = e * N_AG + ag
+            act_frever = actual.fertility_married[act_row, 2]
+            act_childless = actual.fertility_married[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_frever, act_frever, fit_childless, act_childless])
+            mse_fertility_married += (fit_frever - act_frever)**2
+            mse_childless_married += (100*fit_childless - 100*act_childless)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_fertility_married /= (N_EDU * N_AG)
+    mse_childless_married /= (N_EDU * N_AG)
 
-    temp3 = decimate(estimated_marr_divorce_moments, 8, max_period_by_cohort-1, 5)
-    mse_marriage_divorce = np.square(np.subtract(100*temp3[:,[1,2]],100*temp3[:,[3,4]])).mean()
+    # ========== FERTILITY UNMARRIED ==========
+    print("\n===== FERTILITY UNMARRIED =====")
+    mse_fertility_unmarried = 0.0
+    mse_childless_unmarried = 0.0
+    for e in range(N_EDU):
+        headers = ["AgeGrp", "Fert:Fit", "Fert:Act", "Chless:Fit", "Chless:Act"]
+        rows = []
+        for ag in range(N_AG):
+            count = fert_cnt_u[e, ag]
+            fit_frever = fert_tot_u[e, ag] / count if count > 0 else 0
+            fit_childless = childless_u[e, ag] / count if count > 0 else 0
+            act_row = e * N_AG + ag
+            act_frever = actual.fertility_unmarried[act_row, 2]
+            act_childless = actual.fertility_unmarried[act_row, 3]
+            rows.append([AG_LABELS[ag], fit_frever, act_frever, fit_childless, act_childless])
+            mse_fertility_unmarried += (fit_frever - act_frever)**2
+            mse_childless_unmarried += (100*fit_childless - 100*act_childless)**2
+        print(f"  Education: {edu_labels[e]}")
+        print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_fertility_unmarried /= (N_EDU * N_AG)
+    mse_childless_unmarried /= (N_EDU * N_AG)
 
-    headers = ["Age", "Fitted: marriage", "divorce", "Actual: married", "divorce"]
-    # table = tabulate(estimated_marr_divorce_moments[[8, 13 ,18 ,23, 28], :], headers, floatfmt=".2f", tablefmt="simple")
-    table = tabulate(temp3, headers, floatfmt=".2f", tablefmt="simple")
-    print(table)
-    ############ HUSBAND MARRIED AND DIVORCED  #######################################################################################
-    #estimated_marr_divorce_moments = np.c_[age_arr_1970, (m.marriage_moments_h.T[0:36] / c.DRAW_F),
-    #                                       (m.divorce_moments_h.T[0:36] / c.DRAW_F), actual.actual_marr_divorce_moments[
-    #                                                                                 :, 3:5]]
+    # ========== ASSORTATIVE MATING WOMEN (ages 42-46 only) ==========
+    print("\n===== ASSORTATIVE MATING (WOMEN, ages 42-46) =====")
+    mse_assortative_w = 0.0
+    headers = ["OwnEdu", "HS:Fit", "HS:Act", "SC:Fit", "SC:Act", "CG:Fit", "CG:Act"]
+    rows = []
+    for e in range(N_EDU):
+        total = m.assortative_counter_w[e]
+        fit = m.assortative_w[e, :] / total if total > 0 else np.zeros(N_EDU)
+        act = actual.assortative_w[e, :]
+        rows.append([edu_labels[e], fit[0], act[0], fit[1], act[1], fit[2], act[2]])
+        for s in range(N_EDU):
+            mse_assortative_w += (100*fit[s] - 100*act[s])**2
+    print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_assortative_w /= (N_EDU * N_EDU)
 
-    #temp3 = decimate(estimated_marr_divorce_moments, 8, 32, 5)
-    #headers = ["Age", "Fitted: marriage", "divorce", "Actual: married", "divorce"]
-    #table = tabulate(temp3, headers, floatfmt=".2f", tablefmt="simple")
-    #print(table)
-    ###################################################################################################
+    # ========== ASSORTATIVE MATING MEN (ages 42-46 only) ==========
+    print("\n===== ASSORTATIVE MATING (MEN, ages 42-46) =====")
+    mse_assortative_h = 0.0
+    headers = ["OwnEdu", "HS:Fit", "HS:Act", "SC:Fit", "SC:Act", "CG:Fit", "CG:Act"]
+    rows = []
+    for e in range(N_EDU):
+        total = m.assortative_counter_h[e]
+        fit = m.assortative_h[e, :] / total if total > 0 else np.zeros(N_EDU)
+        act = actual.assortative_h[e, :]
+        rows.append([edu_labels[e], fit[0], act[0], fit[1], act[1], fit[2], act[2]])
+        for s in range(N_EDU):
+            mse_assortative_h += (100*fit[s] - 100*act[s])**2
+    print(tabulate(rows, headers, floatfmt=".2f", tablefmt="simple"))
+    mse_assortative_h /= (N_EDU * N_EDU)
 
+    # ========== OBJECTIVE FUNCTION ==========
+    objective_function = ( mse_emp_wife_married +
+                           mse_emp_husband_married +
+                           mse_emp_wife_single +
+                           mse_emp_husband_single +
+                          mse_marriage_w + mse_divorce_w +
+                          mse_marriage_h + mse_divorce_h +
+                          mse_fertility_married + mse_childless_married +
+                          mse_fertility_unmarried + mse_childless_unmarried +
+                          mse_assortative_w + mse_assortative_h)
 
-    school_age_arr = np.arange(18, 18+c.max_school)
-    estimated_school_moments_w = np.c_[school_age_arr, (m.school_moments_wife[1:15, :] / c.DRAW_F), actual.actual_school_moments_w[:, 3:8]]
-    estimated_school_moments_h = np.c_[school_age_arr, (m.school_moments_husband[1:15, :] / c.DRAW_F), actual.actual_school_moments_h[:, 3:8]]
+    print("\n===== OBJECTIVE FUNCTION =====")
+    print(f"Total: {objective_function:.2f}")
+    print(f"  Wage wife married:     {mse_wage_wife_married:.2f}")
+    print(f"  Emp wife married:      {mse_emp_wife_married:.2f}")
+    print(f"  Wage husband married:  {mse_wage_husband_married:.2f}")
+    print(f"  Emp husband married:   {mse_emp_husband_married:.2f}")
+    print(f"  Wage wife single:      {mse_wage_wife_single:.2f}")
+    print(f"  Emp wife single:       {mse_emp_wife_single:.2f}")
+    print(f"  Wage husband single:   {mse_wage_husband_single:.2f}")
+    print(f"  Emp husband single:    {mse_emp_husband_single:.2f}")
+    print(f"  Marriage women:        {mse_marriage_w:.2f}")
+    print(f"  Divorce women:         {mse_divorce_w:.2f}")
+    print(f"  Marriage men:          {mse_marriage_h:.2f}")
+    print(f"  Divorce men:           {mse_divorce_h:.2f}")
+    print(f"  Fertility married:     {mse_fertility_married:.2f}")
+    print(f"  Childless married:     {mse_childless_married:.2f}")
+    print(f"  Fertility unmarried:   {mse_fertility_unmarried:.2f}")
+    print(f"  Childless unmarried:   {mse_childless_unmarried:.2f}")
+    print(f"  Assortative women:     {mse_assortative_w:.2f}")
+    print(f"  Assortative men:       {mse_assortative_h:.2f}")
 
-    mse_school_w = np.square(np.subtract(100*estimated_school_moments_w[c.max_school-2:c.max_school,[1,2]],
-                                         100*estimated_school_moments_w[c.max_school-2:c.max_school, [3,4]])).mean()
-    mse_school_h = np.square(np.subtract(100*estimated_school_moments_h[c.max_school-2:c.max_school,[1,2]],
-                                         100*estimated_school_moments_h[c.max_school-2:c.max_school, [3,4]])).mean()
-
-    headers = ["Age", "Fitted: HSD", "HSG", "SC", "CG", "PC", "Actual: HSD", "HSG", "SC", "CG", "PC"]
-    table = tabulate(estimated_school_moments_w[c.max_school-1:c.max_school, :], headers, floatfmt=".2f", tablefmt="simple")
-    print("  women education moments")
-    print(table)
-    table = tabulate(estimated_school_moments_h[c.max_school-1:c.max_school, :], headers, floatfmt=".2f", tablefmt="simple")
-    print(" men education moments")
-    print(table)
-    ###################################################################################################
-    estimated_assortative_moments = np.c_[(m.assortative_moments / m.assortative_counter), actual.actual_assortative_moments[:,1:6]]
-    mse_assortative = np.square(np.subtract(100*estimated_assortative_moments[:,0:5],100*estimated_assortative_moments[:, 5:10])).mean()
-
-    print("assortative mating: column:wife, row:husband  ")
-    headers = ["Fitted:HSD", "HSG", "SC", "CG", "PC", "Actual:HSD", "HSG", "SC", "CG", "PC"]
-    table = tabulate(estimated_assortative_moments, headers, floatfmt=".2f", tablefmt="simple")
-    print(table)
-    ###################################################################################################
-    objective_function = mse_wage_wife_married + mse_emp_wife_married + \
-                         mse_wage_husband_married + mse_emp_husband_married +\
-                         mse_kids_married + \
-                         mse_wage_wife_single + mse_emp_wife_single + \
-                         mse_wage_husband_single + mse_emp_husband_single + \
-                         mse_kids_unmarried + \
-                         mse_marriage_divorce + \
-                         mse_school_w + mse_school_h + \
-                         mse_assortative
-
-    print(objective_function)
-    if 0 > 1:
-        print("objective function - married: wage wife, emp wife, wage husband, emp husband, kids ")
-        print(mse_wage_wife_married)
-        print(mse_emp_wife_married)
-        print(mse_wage_husband_married)
-        print(mse_emp_husband_married)
-        print(mse_kids_married)
-        print("objective function - unmarried: wage wife, emp wife, wage husband, emp husband, kids ")
-        print(mse_wage_wife_single)
-        print(mse_emp_wife_single)
-        print(mse_wage_husband_single)
-        print(mse_emp_husband_single)
-        print(mse_kids_unmarried)
-        print("objective function - marriage and divorce,school wife, school husband, assortative ")
-        print(mse_marriage_divorce)
-        print(mse_school_w)
-        print(mse_school_h)
-        print(mse_assortative)
     return objective_function
