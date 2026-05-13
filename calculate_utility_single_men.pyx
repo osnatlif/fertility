@@ -110,11 +110,15 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:,:] h_s_emax,
     elif t < c.max_period - 1:
         husband_ability_index = ability_to_index(husband.ability_i)
 
-        u_husband[0] = u_husband_single[0] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, 0]
-        u_husband[1] = float('-inf') # can't get pregnant after 40
-        u_husband[2] = u_husband_single[2] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, 1]
+        # h_s_emax[t, school, kids, ability, he]
+        # option 0: unemployed
+        u_husband[0] = u_husband_single[0] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, c.UNEMP]
+        u_husband[1] = float('-inf') # single men can't get pregnant
+        # option 2: employed full
+        u_husband[2] = u_husband_single[2] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, c.EMP]
         u_husband[3] = float('-inf')
-        u_husband[4] = u_husband_single[4] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, 1]
+        # option 4: employed part
+        u_husband[4] = u_husband_single[4] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, c.EMP]
         u_husband[5] = float('-inf')
         u_husband[6] = float('-inf')  # education is exogenous - schooling choice disabled
 

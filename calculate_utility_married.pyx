@@ -58,6 +58,9 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     cdef double[18] uc_husband
     cdef double temp
     cdef double mq_draw
+    cdef int kb5
+    cdef int kb5_preg
+    cdef int mq
     cdef double temp_h
     cdef double temp_w
     cdef double temp_preg
@@ -405,46 +408,79 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
             kids_temp_preg = kids_temp + 1   # if pregnant - add another kid to emax, but only up to 3 kids
         else:
             kids_temp_preg = 3
-        emax_w = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp, wife_ability_index, husband_ability_index, 0, 0, 0, 0]
-        emax_h = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp, wife_ability_index, husband_ability_index, 0, 0, 0, 0]
-        emax_w_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, 0, 0, 0, 0]
-        emax_h_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, 0, 0, 0, 0]
-        u_wife[0]     = uc_wife[0]     + emax_w
-        u_husband[0]  = uc_husband[0]  + emax_h
-        u_wife[1]     = uc_wife[1]     + emax_w_preg
-        u_husband[1]  = uc_husband[1]  + emax_h_preg
-        u_wife[2]     = uc_wife[2]     + emax_w
-        u_husband[2]  = uc_husband[2]  + emax_h
-        u_wife[3]     = uc_wife[3]     + emax_w_preg
-        u_husband[3]  = uc_husband[3]  + emax_h_preg
-        u_wife[4]     = uc_wife[4]     + emax_w
-        u_husband[4]  = uc_husband[4]  + emax_h
-        u_wife[5]     = uc_wife[5]     + emax_w_preg
-        u_husband[5]  = uc_husband[5]  + emax_h_preg
-        u_wife[6]     = uc_wife[6]     + emax_w
-        u_husband[6]  = uc_husband[6]  + emax_h
-        u_wife[7]     = uc_wife[7]     + emax_w_preg
-        u_husband[7]  = uc_husband[7]  + emax_h_preg
-        u_wife[8]     = uc_wife[8]     + emax_w
-        u_husband[8]  = uc_husband[8]  + emax_h
-        u_wife[9]     = uc_wife[9]     + emax_w_preg
-        u_husband[9]  = uc_husband[9]  + emax_h_preg
-        u_wife[10]    = uc_wife[10]    + emax_w
-        u_husband[10] = uc_husband[10] + emax_h
-        u_wife[11]    = uc_wife[11]    + emax_w_preg
-        u_husband[11] = uc_husband[11] + emax_h_preg
-        u_wife[12]    = uc_wife[12]    + emax_w
-        u_husband[12] = uc_husband[12] + emax_h
-        u_wife[13]    = uc_wife[13]    + emax_w_preg
-        u_husband[13] = uc_husband[13] + emax_h_preg
-        u_wife[14]    = uc_wife[14]    + emax_w
-        u_husband[14] = uc_husband[14] + emax_h
-        u_wife[15]    = uc_wife[15]    + emax_w_preg
-        u_husband[15] = uc_husband[15] + emax_h_preg
-        u_wife[16]    = uc_wife[16]    + emax_w
-        u_husband[16] = uc_husband[16] + emax_h
-        u_wife[17]    = uc_wife[17]    + emax_w_preg
-        u_husband[17] = uc_husband[17] + emax_h_preg
+        # EMAX indices for new dimensions
+        kb5 = wife.kb5
+        kb5_preg = min(3, wife.kb5 + 1)
+        mq = wife.match_quality_i
+
+        # EMAX by (wife_emp, husband_emp) combination — non-pregnant and pregnant variants
+        # w_emax[t, school_w, school_h, kids, ability_w, ability_h, kb5, we, he, mq]
+        # (UNEMP, UNEMP) — wife unemployed, husband unemployed
+        emax_w_uu      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.UNEMP, mq]
+        emax_h_uu      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.UNEMP, mq]
+        emax_w_uu_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.UNEMP, mq]
+        emax_h_uu_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.UNEMP, mq]
+        # (UNEMP, EMP) — wife unemployed, husband employed
+        emax_w_ue      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.EMP, mq]
+        emax_h_ue      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.EMP, mq]
+        emax_w_ue_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.EMP, mq]
+        emax_h_ue_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.EMP, mq]
+        # (EMP, UNEMP) — wife employed, husband unemployed
+        emax_w_eu      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.UNEMP, mq]
+        emax_h_eu      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.UNEMP, mq]
+        emax_w_eu_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.UNEMP, mq]
+        emax_h_eu_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.UNEMP, mq]
+        # (EMP, EMP) — wife employed, husband employed
+        emax_w_ee      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.EMP, mq]
+        emax_h_ee      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.EMP, mq]
+        emax_w_ee_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.EMP, mq]
+        emax_h_ee_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.EMP, mq]
+
+        # options 0-1: wife unemployed, husband unemployed (UNEMP, UNEMP)
+        u_wife[0]     = uc_wife[0]     + emax_w_uu
+        u_husband[0]  = uc_husband[0]  + emax_h_uu
+        u_wife[1]     = uc_wife[1]     + emax_w_uu_preg
+        u_husband[1]  = uc_husband[1]  + emax_h_uu_preg
+        # options 2-3: wife unemployed, husband employed full (UNEMP, EMP)
+        u_wife[2]     = uc_wife[2]     + emax_w_ue
+        u_husband[2]  = uc_husband[2]  + emax_h_ue
+        u_wife[3]     = uc_wife[3]     + emax_w_ue_preg
+        u_husband[3]  = uc_husband[3]  + emax_h_ue_preg
+        # options 4-5: wife unemployed, husband employed part (UNEMP, EMP)
+        u_wife[4]     = uc_wife[4]     + emax_w_ue
+        u_husband[4]  = uc_husband[4]  + emax_h_ue
+        u_wife[5]     = uc_wife[5]     + emax_w_ue_preg
+        u_husband[5]  = uc_husband[5]  + emax_h_ue_preg
+        # options 6-7: wife employed full, husband unemployed (EMP, UNEMP)
+        u_wife[6]     = uc_wife[6]     + emax_w_eu
+        u_husband[6]  = uc_husband[6]  + emax_h_eu
+        u_wife[7]     = uc_wife[7]     + emax_w_eu_preg
+        u_husband[7]  = uc_husband[7]  + emax_h_eu_preg
+        # options 8-9: wife employed full, husband employed full (EMP, EMP)
+        u_wife[8]     = uc_wife[8]     + emax_w_ee
+        u_husband[8]  = uc_husband[8]  + emax_h_ee
+        u_wife[9]     = uc_wife[9]     + emax_w_ee_preg
+        u_husband[9]  = uc_husband[9]  + emax_h_ee_preg
+        # options 10-11: wife employed full, husband employed part (EMP, EMP)
+        u_wife[10]    = uc_wife[10]    + emax_w_ee
+        u_husband[10] = uc_husband[10] + emax_h_ee
+        u_wife[11]    = uc_wife[11]    + emax_w_ee_preg
+        u_husband[11] = uc_husband[11] + emax_h_ee_preg
+        # options 12-13: wife employed part, husband unemployed (EMP, UNEMP)
+        u_wife[12]    = uc_wife[12]    + emax_w_eu
+        u_husband[12] = uc_husband[12] + emax_h_eu
+        u_wife[13]    = uc_wife[13]    + emax_w_eu_preg
+        u_husband[13] = uc_husband[13] + emax_h_eu_preg
+        # options 14-15: wife employed part, husband employed full (EMP, EMP)
+        u_wife[14]    = uc_wife[14]    + emax_w_ee
+        u_husband[14] = uc_husband[14] + emax_h_ee
+        u_wife[15]    = uc_wife[15]    + emax_w_ee_preg
+        u_husband[15] = uc_husband[15] + emax_h_ee_preg
+        # options 16-17: wife employed part, husband employed part (EMP, EMP)
+        u_wife[16]    = uc_wife[16]    + emax_w_ee
+        u_husband[16] = uc_husband[16] + emax_h_ee
+        u_wife[17]    = uc_wife[17]    + emax_w_ee_preg
+        u_husband[17] = uc_husband[17] + emax_h_ee_preg
 
     for i in range(0, 18):
         u_wife_full[i] = u_wife[i]

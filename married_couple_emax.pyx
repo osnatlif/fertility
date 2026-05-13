@@ -78,6 +78,7 @@ cpdef int married_couple_emax(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax
                                 for he in range(0, c.emp_size):
                                     for mq in range(0, c.match_quality_size):
                                         wife.match_quality = c.match_vector[mq]
+                                        wife.match_quality_i = mq
                                         w_sum = 0
                                         h_sum = 0
                                         iter_count = iter_count + 1

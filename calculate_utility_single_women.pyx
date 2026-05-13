@@ -34,6 +34,8 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     cdef double utility_kids = 0
     cdef double utility_leisure = 0
     cdef double temp
+    cdef int kb5
+    cdef int kb5_preg
 
 
     ###################################################################################################
@@ -172,23 +174,30 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     elif t < c.max_period - 1:
         wife_ability_index = ability_to_index(wife.ability_i)
 
-        u_wife[0] = u_wife_single[0] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, 0, 0]
+        # w_s_emax[t, school, kids, ability, kb5, we]
+        kb5 = wife.kb5
+        kb5_preg = min(3, wife.kb5 + 1)
+
+        # options 0-1: unemployed, non-pregnant / pregnant
+        u_wife[0] = u_wife_single[0] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, c.UNEMP]
         if wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[1] = u_wife_single[1] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, 0, 0]
+            u_wife[1] = u_wife_single[1] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, c.UNEMP]
         else:
             u_wife[1] = float('-inf')
 
-        u_wife[2] = u_wife_single[2] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, 0, 0]
+        # options 2-3: employed full, non-pregnant / pregnant
+        u_wife[2] = u_wife_single[2] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, c.EMP]
         if  wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[3] = u_wife_single[3] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, 0, 0]
+            u_wife[3] = u_wife_single[3] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, c.EMP]
         else:
             u_wife[3] = float('-inf')
-        u_wife[4] = u_wife_single[4] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, 0, 0]
+        # options 4-5: employed part, non-pregnant / pregnant
+        u_wife[4] = u_wife_single[4] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, c.EMP]
         if wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index =  wife.kids+1
-            u_wife[5] = u_wife_single[5] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, 0, 0]
+            u_wife[5] = u_wife_single[5] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, c.EMP]
         else:
             u_wife[5] = float('-inf')
 

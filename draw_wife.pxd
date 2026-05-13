@@ -26,6 +26,7 @@ cdef class Wife:
     cdef int age_third_child
     cdef int kb5                       # number of kids below 5
     cdef double match_quality
+    cdef int match_quality_i
 cpdef update_wife_schooling(Wife wife)
 
 # update wife's ability
