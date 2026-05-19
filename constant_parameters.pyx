@@ -8,7 +8,7 @@ race = cohorts.cohort[4:]
 
 print(cohort)
 
-cdef int max_period = 40  # retirement
+cdef int max_period = 34  # retirement (t=1..33 -> ages 18..50)
 full_full_array = [0, 1, 2, 3, 6, 7, 9, 10]
 # marriage options:# first index wife, second husband
 #        0-married + women unemployed  +man unemployed     +non-pregnant

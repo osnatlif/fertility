@@ -34,7 +34,7 @@ cdef class Husband:
         self.hs = 1
         self.sc = 0
         self.cg = 0
-        self.schooling = 0   # husband schooling, can get values of 0-4
+        self.schooling = 0   # husband schooling, can get values of 0-2
         self.years_of_schooling = 11
         self.emp = 0
         self.capacity = 0

@@ -312,39 +312,21 @@ def verify_monotonicity_single_h(filename, dimension, tolerance):
       print("non monotonic array for schooling in: " + filename)
       print("******************************************************")
       for t in range(1, c.max_period_f):
-          for k in range(0, c.kids_size_f):
-              for ability in range(0, c.ability_size_f):
-                  for he in range(0, c.emp_size_f):
-                      valid = [s for s in range(c.school_size_f) if t >= MIN_T[s]]
-                      if len(valid) < 2:
-                          continue
-                      arr = np.array([data[t, s, k, ability, he] for s in valid])
-                      if not monotonic(arr, tolerance):
-                          count += 1
-                          if count <= 20:
-                              print(arr, "valid_schools=", valid)
-                              print([t, ":", k, ability, he])
+          for ability in range(0, c.ability_size_f):
+              for he in range(0, c.emp_size_f):
+                  valid = [s for s in range(c.school_size_f) if t >= MIN_T[s]]
+                  if len(valid) < 2:
+                      continue
+                  arr = np.array([data[t, s, ability, he] for s in valid])
+                  if not monotonic(arr, tolerance):
+                      count += 1
+                      if count <= 20:
+                          print(arr, "valid_schools=", valid)
+                          print([t, ":", ability, he])
       print(f"  total violations: {count}")
 
     if dimension == "kids":
-      print("******************************************************")
-      print("non monotonic array for kids in: " + filename)
-      print("******************************************************")
-      for t in range(1, c.max_period_f):
-          for s in range(0, c.school_size_f):
-              if t < MIN_T[s]:
-                  continue
-              for ability in range(0, c.ability_size_f):
-                  for he in range(0, c.emp_size_f):
-                      arr = np.empty(c.kids_size_f)
-                      for k in range(0, c.kids_size_f):
-                          arr[k] = data[t, s, k, ability, he]
-                      if not monotonic(arr, tolerance):
-                          count += 1
-                          if count <= 20:
-                              print(arr)
-                              print([t, s, ":", ability, he])
-      print(f"  total violations: {count}")
+      print("single men state does not include kids - skipping")
 
     if dimension == "ability":
       print("******************************************************")
@@ -354,16 +336,15 @@ def verify_monotonicity_single_h(filename, dimension, tolerance):
           for s in range(0, c.school_size_f):
               if t < MIN_T[s]:
                   continue
-              for k in range(0, c.kids_size_f):
-                  for he in range(0, c.emp_size_f):
-                      arr = np.empty(c.ability_size_f)
-                      for ability in range(0, c.ability_size_f):
-                          arr[ability] = data[t, s, k, ability, he]
-                      if not monotonic(arr, tolerance):
-                          count += 1
-                          if count <= 20:
-                              print(arr)
-                              print([t, s, k, ":", he])
+              for he in range(0, c.emp_size_f):
+                  arr = np.empty(c.ability_size_f)
+                  for ability in range(0, c.ability_size_f):
+                      arr[ability] = data[t, s, ability, he]
+                  if not monotonic(arr, tolerance):
+                      count += 1
+                      if count <= 20:
+                          print(arr)
+                          print([t, s, ":", he])
       print(f"  total violations: {count}")
 
     if dimension == "age":
@@ -372,16 +353,15 @@ def verify_monotonicity_single_h(filename, dimension, tolerance):
       print("non monotonic array for age (t) in: " + filename)
       print("******************************************************")
       for s in range(0, c.school_size_f):
-          for k in range(0, c.kids_size_f):
-              for ability in range(0, c.ability_size_f):
-                  for he in range(0, c.emp_size_f):
-                      arr = np.array([data[t, s, k, ability, he]
-                                      for t in range(MIN_T[s], c.max_period_f)])
-                      if not monotonic(arr, tolerance):
-                          count += 1
-                          if count <= 20:
-                              print(f"ages {17+MIN_T[s]}-{17+c.max_period_f-1}: {arr[:5]}...{arr[-3:]}")
-                              print([s, k, ability, he])
+          for ability in range(0, c.ability_size_f):
+              for he in range(0, c.emp_size_f):
+                  arr = np.array([data[t, s, ability, he]
+                                  for t in range(MIN_T[s], c.max_period_f)])
+                  if not monotonic(arr, tolerance):
+                      count += 1
+                      if count <= 20:
+                          print(f"ages {17+MIN_T[s]}-{17+c.max_period_f-1}: {arr[:5]}...{arr[-3:]}")
+                          print([s, ability, he])
       print(f"  total violations: {count}")
 
 

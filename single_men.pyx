@@ -17,7 +17,7 @@ from calculate_utility_single_men cimport calculate_utility_single_men
 cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
     double[:, :, :, :, :, :, :, :, :, :] h_emax,
     double[:,:,:,:,:,:] w_s_emax,
-    double[:,:,:,:,:] h_s_emax, verbose) except -1:
+    double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double sum_emax = 0
     cdef int married_index = -99
@@ -39,8 +39,8 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
     cdef double[18] u_husband
     cdef double[18] u_wife_full
     cdef double[18] u_husband_full
-    cdef double[13] u_w_single_full
-    cdef double[7] u_h_single_full
+    cdef double[6] u_w_single_full
+    cdef double[6] u_h_single_full
 
     if verbose:
         print("====================== single men:  ======================")
@@ -52,12 +52,12 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
             continue
         husband.schooling = school
         draw_husband.update_school(husband)
-        for kids in range(0, 2):                # for each number of kids: 0, 1,   - open loop of kids
-            husband.kids = kids
-            for ability in range(0, c.ability_size):     # for each ability level: low, medium, high - open loop of ability
-                husband.ability_i = ability
-                husband.ability_value = c.ability_vector[ability] * p.sigma_ability_h
-                for he in range(0, c.emp_size):
+        for ability in range(0, c.ability_size):     # for each ability level: low, medium, high - open loop of ability
+            husband.ability_i = ability
+            husband.ability_value = c.ability_vector[ability] * p.sigma_ability_h
+            for he in range(0, c.emp_size):
+                    husband.emp = he
+                    husband.capacity = he
                     sum_emax = 0
                     iter_count = iter_count + 1
                     if verbose:
@@ -88,9 +88,9 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
                                     married_index = i
 
                         # calculate single outside option
-                        single_outside_option = prob_full_h * maxvalue_filter(u_h_single_full, [0, 2, 6], 3) + \
-                                                prob_part_h * maxvalue_filter(u_h_single_full, [0, 4, 6], 3) + \
-                                                (1 - prob_full_h - prob_part_h) * maxvalue_filter(u_h_single_full, [0, 6], 2)
+                        single_outside_option = prob_full_h * maxvalue_filter(u_h_single_full, [0, 2], 2) + \
+                                                prob_part_h * maxvalue_filter(u_h_single_full, [0, 4], 2) + \
+                                                (1 - prob_full_h - prob_part_h) * u_h_single_full[0]
 
                         if married_index > -99:
                             temp = prob_meet_potential_partner * u_husband[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
@@ -99,9 +99,9 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
                         sum_emax += temp
 
                     # end draw backward loop
-                    h_s_emax[t][school][kids][ability][he] = sum_emax / c.DRAW_B
+                    h_s_emax[t][school][ability][he] = sum_emax / c.DRAW_B
                     if verbose:
-                        print("emax(", t, ", ", school, ", ", kids, ",", ability, ",", he, ")=", sum_emax / c.DRAW_B)
+                        print("emax(", t, ", ", school, ", ",  ability, ",", he, ")=", sum_emax / c.DRAW_B)
                         print("======================================================")
 
     return iter_count

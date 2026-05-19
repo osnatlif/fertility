@@ -4,6 +4,7 @@ cimport constant_parameters as c
 from single_men cimport single_men
 from single_women cimport single_women
 from married_couple_emax cimport married_couple_emax
+from seed cimport seed
 
 
 cpdef create_married_emax():
@@ -19,7 +20,7 @@ cpdef create_single_w_emax():
 
 
 cpdef create_single_h_emax():
-    return np.full([c.max_period, c.school_size, c.kids_size, c.ability_size,
+    return np.full([c.max_period, c.school_size, c.ability_size,
                     c.emp_size],
                    float('-inf'))
 
@@ -66,21 +67,24 @@ def dump_single_h_emax(filename, emax):
     print("dumping single men emax matrix to: "+filename)
     for t in range(1, c.max_period):
         for s in range(0, c.school_size):
-            for k in range(0, c.kids_size):
-                for ability in range(0, c.ability_size):
-                    for he in range(0, c.emp_size):
-                        index = [t, s, k, ability, he]
-                        str_index = ", ".join(str(i) for i in index)
-                        value = emax[t][s][k][ability][he]
-                        file.write(str_index+", "+format(value, '.2f')+"\n")
+            for ability in range(0, c.ability_size):
+                for he in range(0, c.emp_size):
+                    index = [t, s, ability, he]
+                    str_index = ", ".join(str(i) for i in index)
+                    value = emax[t][s][ability][he]
+                    file.write(str_index+", "+format(value, '.2f')+"\n")
     file.close()
 
 cpdef int calculate_emax(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     double[:,:,:,:,:,:,:,:,:,:] h_emax,
-    double[:,:,:,:,:,:] w_s_emax, double[:,:,:,:,:] h_s_emax, verbose) except -1:
+    double[:,:,:,:,:,:] w_s_emax, double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double tic
     cdef double toc
+    # reseed at start of each backward solve so that common random numbers
+    # are used across parameter trials in an estimation loop
+    seed(1)
+    np.random.seed(1)
     # running until the one before last period
     for t in range(c.max_period - 1, 0, -1):
         # EMAX FOR SINGLE MEN

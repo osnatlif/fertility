@@ -15,7 +15,7 @@ from calculate_utility_single_men cimport calculate_utility_single_men
 cpdef int married_couple_emax(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
     double[:, :, :, :, :, :, :, :, :, :] h_emax,
     double[:,:,:,:,:,:] w_s_emax,
-    double[:,:,:,:,:] h_s_emax, verbose) except -1:
+    double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double w_sum = 0
     cdef double h_sum = 0
@@ -44,8 +44,8 @@ cpdef int married_couple_emax(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax
     cdef double[18] u_husband
     cdef double[18] u_wife_full
     cdef double[18] u_husband_full
-    cdef double[13] u_w_single_full
-    cdef double[7] u_h_single_full
+    cdef double[6] u_w_single_full
+    cdef double[6] u_h_single_full
     cdef draw_wife.Wife wife = draw_wife.Wife()
     cdef draw_husband.Husband husband = draw_husband.Husband()
     if verbose:
@@ -74,8 +74,14 @@ cpdef int married_couple_emax(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax
                         husband.ability_value = c.ability_vector[ability_h] * p.sigma_ability_h
                         for kb5 in range(0, c.kids_below_5_size):
                             wife.kb5 = kb5
+                            if kb5>kids:
+                                continue
                             for we in range(0, c.emp_size):
+                                wife.emp = we
+                                wife.capacity = we
                                 for he in range(0, c.emp_size):
+                                    husband.emp = he
+                                    husband.capacity = he
                                     for mq in range(0, c.match_quality_size):
                                         wife.match_quality = c.match_vector[mq]
                                         wife.match_quality_i = mq
@@ -106,17 +112,12 @@ cpdef int married_couple_emax(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax
                                                         married_index = i
 
                                             # calculate single outside options
-                                            husband_single_outside = prob_full_h * maxvalue_filter(u_h_single_full, [0, 2, 6], 3) + \
-                                                                     prob_part_h * maxvalue_filter(u_h_single_full, [0, 4, 6], 3) + \
-                                                                     (1 - prob_full_h - prob_part_h) * maxvalue_filter(u_h_single_full, [0, 6], 2)
-                                            if kids == 0:
-                                                wife_single_outside = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3, 6], 5) + \
-                                                                      prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5, 6], 5) + \
-                                                                      (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1, 6], 3)
-                                            else:
-                                                wife_single_outside = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3, 6, 7, 8, 9, 10], 9) + \
-                                                                      prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5, 6, 7, 8, 11, 12], 9) + \
-                                                                      (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1, 6, 7, 8], 5)
+                                            husband_single_outside = prob_full_h * maxvalue_filter(u_h_single_full, [0, 2], 2) + \
+                                                                     prob_part_h * maxvalue_filter(u_h_single_full, [0, 4], 2) + \
+                                                                     (1 - prob_full_h - prob_part_h) * u_h_single_full[0]
+                                            wife_single_outside = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3], 4) + \
+                                                                      prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5], 4) + \
+                                                                      (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1], 2)
 
                                             if married_index > -99:
                                                 h_sum += u_husband[married_index]

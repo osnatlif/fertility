@@ -61,8 +61,8 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
 
 
     net_income_single_w_ue = c.ub_w  # if single and unemployed
-    net_income_single_w_ef = tax.gross_to_net_single(wife.kids, wage_w_full_c, t, back) + alimony_sum - c.childcare_cost * wife.kb5
-    net_income_single_w_ep = tax.gross_to_net_single(wife.kids, wage_w_part_c, t, back) + alimony_sum - c.childcare_cost * wife.kb5
+    net_income_single_w_ef = tax.gross_to_net_single(wife.kids, wage_w_full_c, t, back)  - c.childcare_cost * wife.kb5
+    net_income_single_w_ep = tax.gross_to_net_single(wife.kids, wage_w_part_c, t, back)  - 0.6 * c.childcare_cost * wife.kb5
 
     # Childcare affordability check:
     # If childcare costs push net income below unemployment benefit (ub_w), the woman can't afford to work.
@@ -154,11 +154,11 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
 
     # calculate expected utility = current utility + emax value if t<T. = current utility + terminal value if t==T
     if t == c.max_period - 1:
-        u_wife[0]= u_wife_single[0] + p.t1_w*wife.sc+p.t2_w*wife.cg
+        u_wife[0]= u_wife_single[0] + p.t1_w*wife.sc+p.t2_w*wife.cg + p.t6_w*wife.kids
         u_wife[1]= float('-inf') # can't get pregnant at 60
-        u_wife[2]= u_wife_single[2] + p.t1_w*wife.sc+p.t2_w*wife.cg #one more year of experience
+        u_wife[2]= u_wife_single[2] + p.t1_w*wife.sc+p.t2_w*wife.cg + p.t6_w*wife.kids #one more year of experience
         u_wife[3]= float('-inf') # can't get pregnant at 60
-        u_wife[4]= u_wife_single[4] + p.t1_w*wife.sc+p.t2_w*wife.cg #one more year of experience
+        u_wife[4]= u_wife_single[4] + p.t1_w*wife.sc+p.t2_w*wife.cg + p.t6_w*wife.kids #one more year of experience
         u_wife[5] = float('-inf') # can't get pregnant at 60
 
     #####################################################################   ADD EMAX    ########################

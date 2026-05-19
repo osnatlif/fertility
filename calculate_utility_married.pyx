@@ -41,15 +41,6 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     cdef double budget_c_married_Wep_Hue = 0
     cdef double budget_c_married_Wep_Hef = 0
     cdef double budget_c_married_Wep_Hep = 0
-    cdef double kids_utility_married_Wue_Hue = 0
-    cdef double kids_utility_married_Wue_Hef = 0
-    cdef double kids_utility_married_Wue_Hep = 0
-    cdef double kids_utility_married_Wef_Hue = 0
-    cdef double kids_utility_married_Wef_Hef = 0
-    cdef double kids_utility_married_Wef_Hep = 0
-    cdef double kids_utility_married_Wep_Hue = 0
-    cdef double kids_utility_married_Wep_Hef = 0
-    cdef double kids_utility_married_Wep_Hep = 0
     cdef double preg_utility = float('-inf')
     cdef double marriage_utility = 0
     cdef double marriage_cost_h = 0
@@ -72,10 +63,7 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     cdef double wage_w_part_c = 0
     cdef double wage_w_full_c = 0
     # in variables' names: first index wife, second husband
-    kids_temp = wife.kids + husband.kids
-    if kids_temp > 3:
-        print("error number of kids")
-        kids_temp = 3
+
     # if married, kids only at wife object.if consider getting married, add both kids
     if back == 1:
         wage_w_full_c = tmp_full_w
@@ -106,11 +94,11 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     ###############
     net_income_married_Wef_Hue  = c.ub_h + tax.gross_to_net_married(kids_temp, wage_w_full_c,  0         , t, back) - c.childcare_cost * wife.kb5
     net_income_married_Wef_Hef  =          tax.gross_to_net_married(kids_temp, wage_w_full_c, wage_h_full_c , t, back) - c.childcare_cost * wife.kb5
-    net_income_married_Wef_Hep  =          tax.gross_to_net_married(kids_temp, wage_w_full_c, wage_h_part_c , t, back) - c.childcare_cost * wife.kb5
+    net_income_married_Wef_Hep  =          tax.gross_to_net_married(kids_temp, wage_w_full_c, wage_h_part_c , t, back) - 0.6 * c.childcare_cost * wife.kb5
     ###################
     net_income_married_Wep_Hue = c.ub_h + tax.gross_to_net_married(kids_temp, wage_w_part_c,    0       , t, back) - c.childcare_cost * wife.kb5
     net_income_married_Wep_Hef =          tax.gross_to_net_married(kids_temp, wage_w_part_c, wage_h_full_c, t, back) - c.childcare_cost * wife.kb5
-    net_income_married_Wep_Hep =          tax.gross_to_net_married(kids_temp, wage_w_part_c, wage_h_part_c, t, back) - c.childcare_cost * wife.kb5
+    net_income_married_Wep_Hep =          tax.gross_to_net_married(kids_temp, wage_w_part_c, wage_h_part_c, t, back) - 0.6 * c.childcare_cost * wife.kb5
 
     # Childcare affordability check:
     # If childcare costs push net income below ub_w for any wife-employed combination,
@@ -132,14 +120,14 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
         net_income_married_Wep_Hep = float('-inf')
 
     # budget constraint
-    if kids_temp == 0:
-        eta = 0
-    elif kids_temp == 1:
-        eta = c.eta1            # this is the fraction of parent's income that one child gets
-    elif kids_temp == 2:
-        eta = c.eta2
-    elif kids_temp == 3:
-        eta = c.eta3
+    if wife.kids == 0:  # calculate values for wife in all cases
+        etaw = 0
+    elif wife.kids == 1:
+        etaw = c.eta1  #this is the fraction of parent's income that one child gets
+    elif wife.kids == 2:
+        etaw = c.eta2
+    elif wife.kids == 3:
+        etaw = c.eta3
     else:
         assert False
 
@@ -164,10 +152,10 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     utility_leisure_h_part = p.alpha2h0 * (c.leisure_part - c.home_p) + p.alpha2h1 * husband.kids * (c.leisure_part - c.home_p)
 
     # I assume that each kid get 20% (eta1). if the family has 2 kids, each gets 20%, yet the total is 32% (eta2) since part is common
-    if kids_temp > 0:
+    if wife.kids > 0:
         # first index wife, second husband
         kids_utility = cmath.pow(wife.kids, p.alpha4)
-    elif kids_temp == 0:
+    elif wife.kids == 0:
         kids_utility = 0
 
     # utility from pregnancy when married / utility from pregnancy when SINGLE
@@ -194,12 +182,14 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
         else:
             wife.match_quality = c.match_vector[2]  # high
 
-    if wife.schooling == husband.schooling:
-        marriage_utility = p.taste_equal + wife.match_quality + temp  # utility from marriage - same education
-    elif wife.schooling < husband.schooling:
-        marriage_utility = p.taste_w_up +  wife.match_quality + temp  # utility from marriage - husband more educated
+    if wife.schooling == husband.schooling == 0:
+        marriage_utility = p.taste_hs + wife.match_quality + temp  # utility from marriage - same education
+    elif wife.schooling == husband.schooling == 1:
+        marriage_utility = p.taste_sc + wife.match_quality + temp  # utility from marriage - husband more educated
+    elif wife.schooling == husband.schooling == 2:
+        marriage_utility = p.taste_cg + wife.match_quality + temp  # utility from marriage - husband more educated
     else:
-        marriage_utility = p.taste_w_down + wife.match_quality + temp  # utility from marriage - wife more educated
+        marriage_utility = p.mconst + wife.match_quality + temp  # utility from marriage - wife more educated
     marriage_cost_h = p.mc
     marriage_cost_w = p.mc
     # marriage options:# first index wife, second husband
@@ -355,40 +345,40 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     ##################################################################################################
     ##################################################################################################
     if t == c.max_period - 1:
-        u_wife[0] = uc_wife[0] + p.t1_w*wife.sc + p.t2_w*wife.cg + p.t3_w*husband.sc + p.t4_w*husband.cg + p.t5_w
-        u_husband[0] = uc_husband[0] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[0] = uc_wife[0] + p.t1_w*wife.sc + p.t2_w*wife.cg + p.t3_w*husband.sc + p.t4_w*husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[0] = uc_husband[0] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[1] = float('-inf')
         u_husband[1] = float('-inf')
-        u_wife[2] =    uc_wife[2]    + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[2] = uc_husband[2] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[2] =    uc_wife[2]    + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[2] = uc_husband[2] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[3] = float('-inf')
         u_husband[3]= float('-inf')
-        u_wife[4] =       uc_wife[4] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[4] = uc_husband[4] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[4] =       uc_wife[4] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[4] = uc_husband[4] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[5] = float('-inf')
         u_husband[5] = float('-inf')
-        u_wife[6] = uc_wife[6] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[6] = uc_husband[6] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[6] = uc_wife[6] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[6] = uc_husband[6] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[7] = float('-inf')
         u_husband[7] = float('-inf')
-        u_wife[8] = uc_wife[8] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[8] = uc_husband[8] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[8] = uc_wife[8] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[8] = uc_husband[8] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[9] = float('-inf')
         u_husband[9] = float('-inf')
-        u_wife[10] = uc_wife[10] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[10] = uc_husband[10] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[10] = uc_wife[10] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[10] = uc_husband[10] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[11]= float('-inf')
         u_husband[11] = float('-inf')
-        u_wife[12] = uc_wife[12] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[12] = uc_husband[12] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[12] = uc_wife[12] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[12] = uc_husband[12] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[13]= float('-inf')
         u_husband[13] = float('-inf')
-        u_wife[14] = uc_wife[14] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[14] = uc_husband[14] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[14] = uc_wife[14] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[14] = uc_husband[14] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[15]= float('-inf')
         u_husband[15] = float('-inf')
-        u_wife[16] = uc_wife[16] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w
-        u_husband[16] = uc_husband[16] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h
+        u_wife[16] = uc_wife[16] + p.t1_w * wife.sc + p.t2_w * wife.cg + p.t3_w * husband.sc + p.t4_w * husband.cg + p.t5_w + p.t6_w*wife.kids
+        u_husband[16] = uc_husband[16] + p.t1_h * wife.sc + p.t2_h * wife.cg + p.t3_h * husband.sc + p.t4_h * husband.cg + p.t5_h + p.t6_h*wife.kids
         u_wife[17] = float('-inf')
         u_husband[17] = float('-inf')
 

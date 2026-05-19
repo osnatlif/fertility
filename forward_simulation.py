@@ -14,7 +14,7 @@ from update_wife_husband_objects import update_married
 from moments import Moments, calculate_moments
 from seed import seed
 
-MAX_AGE = 55   # all education levels end at age 55
+MAX_AGE = 50   # all education levels end at age 50
 
 def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_moments):
     seed(1)
@@ -71,6 +71,9 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
                         if c.bp_f * u_wife[i] + (1-c.bp_f) * u_husband[i] > weighted_utility:
                             weighted_utility = c.bp_f * u_wife[i] + (1-c.bp_f) * u_husband[i]
                             married_index = i
+                if married_index > -99:
+                    assert u_wife[married_index] > single_women_value, (married_index, u_wife[married_index], single_women_value)
+                    assert u_husband[married_index] > single_men_value, (married_index, u_husband[married_index], single_men_value)
             #####################################################################################
             # update objects and moments = married
             #####################################################################################
@@ -179,6 +182,9 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
                         if c.bp_f * u_wife[i] + (1 - c.bp_f) * u_husband[i] > weighted_utility:
                             weighted_utility = c.bp_f * u_wife[i] + (1 - c.bp_f) * u_husband[i]
                             married_index = i
+                if married_index > -99:
+                    assert u_wife[married_index] > single_women_value, (married_index, u_wife[married_index], single_women_value)
+                    assert u_husband[married_index] > single_men_value, (married_index, u_husband[married_index], single_men_value)
             #####################################################################################
             # update objects and moments = married
             #####################################################################################
@@ -226,6 +232,17 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
             m.total_h[edu_level, age_idx] += 1
             m.marriage_h[edu_level, age_idx] += husband.get_married()
             m.divorce_h[edu_level, age_idx] += husband.get_divorce()
+
+    # ---- Group C: aggregate moment closure ----
+    # every observed (edu, age) woman-period is either married or single (and contributes to fertility counters too)
+    for e in range(c.school_size_f):
+        for a in range(m.emp_wife_married.shape[1]):
+            married_count = m.emp_wife_married[e, a, :].sum()
+            single_count = m.emp_wife_single[e, a, :].sum()
+            assert married_count + single_count == m.total_w[e, a], \
+                f"women emp split != total at (edu={e}, age={a}): married={married_count}, single={single_count}, total={m.total_w[e, a]}"
+            assert m.fertility_count_married[e, a] + m.fertility_count_unmarried[e, a] == m.total_w[e, a], \
+                f"women fertility counts != total at (edu={e}, age={a})"
 
     estimated_moments = calculate_moments(m, display_moments)
     return estimated_moments

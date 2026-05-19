@@ -9,7 +9,7 @@ cimport gross_to_net as tax
 cimport constant_parameters as c
 from draw_husband cimport Husband
 
-cpdef tuple calculate_utility_single_men(double[:,:,:,:,:] h_s_emax,
+cpdef tuple calculate_utility_single_men(double[:,:,:,:] h_s_emax,
     double wage_h_part, double wage_h_full, double tmp_full_h, Husband husband, int t, double[:] u_husband_full, int back):
     ###################################################################################################
     #      calculate utility for single man
@@ -91,11 +91,11 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:,:] h_s_emax,
     # calculate expected utility = current utility + emax value if t<T. = current utility + terminal value if t==T
 
     if t == c.max_period -1:
-        u_husband[0] = u_husband_single[0] + p.t3_h*husband.sc+p.t4_h*husband.cg
+        u_husband[0] = u_husband_single[0] + p.t3_h*husband.sc+p.t4_h*husband.cg + p.t6_h*husband.kids
         u_husband[1] = float('-inf') # can't get pregnant at 60
-        u_husband[2] = u_husband_single[2] + p.t3_h*husband.sc+p.t4_h*husband.cg #one more year of experience
+        u_husband[2] = u_husband_single[2] + p.t3_h*husband.sc+p.t4_h*husband.cg + p.t6_h*husband.kids #one more year of experience
         u_husband[3] = float('-inf') # can't get pregnant at 60
-        u_husband[4] = u_husband_single[4] + p.t3_h*husband.sc+p.t4_h*husband.cg #one more year of experience
+        u_husband[4] = u_husband_single[4] + p.t3_h*husband.sc+p.t4_h*husband.cg + p.t6_h*husband.kids #one more year of experience
         u_husband[5] = float('-inf') # can't get pregnant at 60
 
     #####################################################################   ADD EMAX    ########################
@@ -112,15 +112,14 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:,:] h_s_emax,
 
         # h_s_emax[t, school, kids, ability, he]
         # option 0: unemployed
-        u_husband[0] = u_husband_single[0] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, c.UNEMP]
+        u_husband[0] = u_husband_single[0] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_ability_index, c.UNEMP]
         u_husband[1] = float('-inf') # single men can't get pregnant
         # option 2: employed full
-        u_husband[2] = u_husband_single[2] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, c.EMP]
+        u_husband[2] = u_husband_single[2] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_ability_index, c.EMP]
         u_husband[3] = float('-inf')
         # option 4: employed part
-        u_husband[4] = u_husband_single[4] + c.beta0 * h_s_emax[t+1, husband.schooling, husband.kids, husband_ability_index, c.EMP]
+        u_husband[4] = u_husband_single[4] + c.beta0 * h_s_emax[t+1, husband.schooling, husband_ability_index, c.EMP]
         u_husband[5] = float('-inf')
-        u_husband[6] = float('-inf')  # education is exogenous - schooling choice disabled
 
     else:
         assert False

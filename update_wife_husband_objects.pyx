@@ -49,6 +49,9 @@ cpdef update_wife_kids_age(Wife wife):
     if wife.age_third_child > 0 and wife.age_third_child <= 5:
         count += 1
     wife.kb5 = count
+    assert 0 <= wife.kids <= 3, ("invalid wife.kids", wife.kids)
+    assert 0 <= wife.kb5 <= 3, ("invalid wife.kb5", wife.kb5)
+    assert wife.kb5 <= wife.kids, ("kb5 > kids", wife.kb5, wife.kids)
 
 
 cpdef update_wife_single(Wife wife, single_women_index):
@@ -71,6 +74,10 @@ cpdef update_wife_single(Wife wife, single_women_index):
     else:
         wife.preg = 0
     update_wife_kids_age(wife)   # this function follows the kid's age, and drop kids at age 18
+    assert wife.married == 0
+    assert wife.emp in (0, 1)
+    assert wife.capacity in (0, 0.5, 1)
+    assert wife.preg in (0, 1)
     return
 
 
@@ -89,6 +96,9 @@ cpdef update_husband_single(Husband husband, single_men_index):
     else:
         husband.emp = 0
         husband.capacity = 0
+    assert husband.married == 0
+    assert husband.emp in (0, 1)
+    assert husband.capacity in (0, 0.5, 1)
     return
 
 # marriage options:# first index wife, second husband
@@ -149,4 +159,11 @@ cpdef update_married(Husband husband, Wife wife, married_index):
         husband.kids = 0
         wife.preg = 0
     update_wife_kids_age(wife)   # this function follows the kid's age, and drop kids at age 18
+    assert wife.married == 1
+    assert husband.married == 1
+    assert wife.emp in (0, 1)
+    assert wife.capacity in (0, 0.5, 1)
+    assert husband.emp in (0, 1)
+    assert husband.capacity in (0, 0.5, 1)
+    assert husband.kids == 0, ("kids must stay on wife when married", husband.kids)
     return

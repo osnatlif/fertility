@@ -17,7 +17,7 @@ from calculate_utility_single_men cimport calculate_utility_single_men
 cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
     double[:, :, :, :, :, :, :, :, :, :] h_emax,
     double[:,:,:,:,:,:] w_s_emax,
-    double[:,:,:,:,:] h_s_emax, verbose) except -1:
+    double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double sum_emax
     cdef double weighted_utility = float('-inf')
@@ -59,8 +59,12 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
                 wife.ability_value = c.ability_vector[ability] * p.sigma_ability_w  # wife ability - low, medium, high
                 draw_wife.update_ability_back(wife)
                 for kb5 in range(0, c.kids_below_5_size):
+                    if kb5 > kids:
+                        continue
                     wife.kb5 = kb5
                     for we in range(0, c.emp_size):
+                        wife.emp = we
+                        wife.capacity = we
                         sum_emax = 0
                         iter_count = iter_count + 1
                         if verbose:
@@ -91,14 +95,16 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
                                         married_index = i
 
                             # calculate single outside option
-                            if kids == 0:  # can't choose welfare
-                                single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3, 6], 5) + \
-                                                        prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5, 6], 5) + \
-                                                        (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1, 6], 3)
-                            else:  # have children so can choose to take welfare
-                                single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3, 6, 7, 8, 9, 10], 9) + \
-                                                        prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5, 6, 7, 8, 11, 12], 9) + \
-                                                        (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1, 6, 7, 8], 5)
+                            # single options:
+                            #            0-single + unemployed + non-pregnant
+                            #            1-single + unemployed + pregnant - zero for men
+                            #            2-single + employed full  + non-pregnant
+                            #            3-single + employed full  + pregnant   - zero for men
+                            #            4-single + employed part + non-pregnant
+                            #            5-single + employed part + pregnant   - zero for men
+                            single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3], 4) + \
+                                                        prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5], 4) + \
+                                                        (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1], 2)
 
                             if married_index > -99:
                                 temp = prob_meet_potential_partner * u_wife[married_index] + (1 - prob_meet_potential_partner) * single_outside_option

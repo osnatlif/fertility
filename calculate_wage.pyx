@@ -16,8 +16,7 @@ cpdef tuple calculate_wage_w(Wife wife, int t):
     cdef double prob_part_tmp
     cdef double prob_full_w
     cdef double prob_part_w
-    cdef double tmp1 = 0
-    cdef double tmp2 = 0
+    cdef double tmp = 0
     cdef double prob_not_laid_off_tmp
     cdef double prob_not_laid_off_w
     cdef int full_time_offer = 0
@@ -39,30 +38,26 @@ cpdef tuple calculate_wage_w(Wife wife, int t):
     prob_full_w = cmath.exp(prob_full_tmp) / (1 + cmath.exp(prob_full_tmp))
     prob_part_w = cmath.exp(prob_part_tmp) / (1 + cmath.exp(prob_part_tmp))
 
+    tmp = randn(0, p.sigma_w_wage)
     if wife.emp == c.UNEMP:   # didn't work in previous period
         # draw job offer
         if uniform() < prob_full_w:   # got full time job offer - draw wage for full time
             full_time_offer = 1
         if uniform() < prob_part_w:
             part_time_offer = 1
-        if full_time_offer or part_time_offer:
-            if full_time_offer:
-                tmp2 = randn(0, p.sigma_w_wage)
-                wage_full = cmath.exp(tmp_full + tmp2)
-            if part_time_offer:
-                # draw wage for full time - will be multiply by 0.5 if part time job
-                tmp2 = randn(0, p.sigma_w_wage)
-                wage_part = 0.5 * cmath.exp(tmp_full + tmp2)
+        if full_time_offer:
+            wage_full = cmath.exp(tmp_full + tmp)
+        if part_time_offer:
+            wage_part = 0.5 * cmath.exp(tmp_full + tmp)
     else:   #    wife.emp == c.EMP - worked in previous period
         prob_not_laid_off_tmp = p.lambda0_w_f + p.lambda1_w_f*t + p.lambda15_w_f*t*t + p.lambda2_w_f*wife.schooling
         prob_not_laid_off_w = cmath.exp(prob_not_laid_off_tmp)/(1+ cmath.exp(prob_not_laid_off_tmp))
         if uniform()  < prob_not_laid_off_w:
-            tmp2 = randn(0, p.sigma_w_wage)
             if wife.capacity == 1:  # worked in previous period full time
-                wage_full = cmath.exp(tmp_full + tmp2)
+                wage_full = cmath.exp(tmp_full + tmp)
             else:
                 assert(wife.capacity == 0.5)
-                wage_part = 0.5 * cmath.exp(tmp_full + tmp2)
+                wage_part = 0.5 * cmath.exp(tmp_full + tmp)
 
     return wage_full, wage_part,prob_full_w, prob_part_w, cmath.exp(tmp_full)
 
@@ -75,8 +70,6 @@ cpdef tuple calculate_wage_h(Husband husband, int t):
     cdef double prob_part_tmp = 0
     cdef double prob_full_h = 0
     cdef double prob_part_h = 0
-    cdef double temp1 = 0
-    cdef double temp2 = 0
     cdef double temp = 0
     cdef double tmp_full = 0
     cdef double tmp_part = 0
@@ -98,24 +91,22 @@ cpdef tuple calculate_wage_h(Husband husband, int t):
     prob_full_h = cmath.exp(prob_full_tmp) / (1 + cmath.exp(prob_full_tmp))
     prob_part_h = cmath.exp(prob_part_tmp) / (1 + cmath.exp(prob_part_tmp))
 
+    tmp = randn(0, p.sigma_h_wage)
     if husband.emp == c.UNEMP:  # didn't work in previous period
         # draw job offer
         temp = uniform()
-        if temp  < prob_full_h:  # w_draws = rand(DRAW_F,T,2)  1 - health,2 -job offer,
+        if temp  < prob_full_h:  # w_draws = rand(DRAW_F,T,2)
             # draw wage for full time
-            tmp2 = randn(0, p.sigma_h_wage)
-            wage_full = cmath.exp(tmp_full + tmp2)
+            wage_full = cmath.exp(tmp_full + tmp)
         if uniform()  < prob_part_h:
-            tmp2 = randn(0, p.sigma_h_wage)
-            wage_part = 0.5 * cmath.exp(tmp_full + tmp2)
+            wage_part = 0.5 * cmath.exp(tmp_full + tmp)
     else:  #  husband.emp == 1 - worked in previous period
         prob_not_laid_off_tmp = p.lambda0_h_f + p.lambda1_h_f * t + p.lambda15_h_f * t * t + p.lambda2_h_f *  husband.schooling
         prob_not_laid_off_h = cmath.exp(prob_not_laid_off_tmp) / (1 + cmath.exp(prob_not_laid_off_tmp))
         if uniform() < prob_not_laid_off_h:
-            tmp2 = randn(0, p.sigma_h_wage)
             if husband.capacity == 1:  # worked in previous period full time
-                wage_full = cmath.exp(tmp_full + tmp2)
+                wage_full = cmath.exp(tmp_full + tmp)
             else:
                 assert(husband.capacity == 0.5)
-                wage_part = 0.5 * cmath.exp(tmp_full + tmp2)
+                wage_part = 0.5 * cmath.exp(tmp_full + tmp)
     return wage_full, wage_part, prob_full_h, prob_part_h, cmath.exp(tmp_full)
