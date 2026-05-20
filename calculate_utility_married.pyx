@@ -17,11 +17,11 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     double[:,:,:,:,:,:,:,:,:,:] h_emax,
     double wage_h_part, double wage_h_full, double wage_w_part, double wage_w_full,
     double tmp_full_h, double tmp_full_w, Wife wife, Husband husband, int t,
-    double[:] u_wife, double[:] u_husband, double[:] u_wife_full, double[:] u_husband_full, int back):
+    double[:] u_wife, double[:] u_husband, double[:] u_wife_full, double[:] u_husband_full, int back,
+    double temp, double temp_preg, int preg_possible):
     #####################################################################################################
     ##### declare variables anf initilize
     #####################################################################################################
-    cdef int kids_temp = 0
     cdef double net_income_married_Wue_Hue = 0
     cdef double net_income_married_Wue_Hef = 0
     cdef double net_income_married_Wue_Hep = 0
@@ -31,7 +31,7 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     cdef double net_income_married_Wep_Hue = 0
     cdef double net_income_married_Wep_Hef = 0
     cdef double net_income_married_Wep_Hep = 0
-    cdef double eta = 0
+    cdef double etaw = 0
     cdef double budget_c_married_Wue_Hue = 0
     cdef double budget_c_married_Wue_Hef = 0
     cdef double budget_c_married_Wue_Hep = 0
@@ -47,14 +47,12 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     cdef double marriage_cost_w = 0
     cdef double[18] uc_wife
     cdef double[18] uc_husband
-    cdef double temp
     cdef double mq_draw
     cdef int kb5
     cdef int kb5_preg
     cdef int mq
     cdef double temp_h
     cdef double temp_w
-    cdef double temp_preg
     cdef double utility_leisure = 0
     cdef double utility_leisure_part = 0
     cdef double utility_number_kids = 0
@@ -89,16 +87,16 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
             wage_h_part_c = 0
 
     net_income_married_Wue_Hue  = c.ub_w + c.ub_h
-    net_income_married_Wue_Hef  = c.ub_w + tax.gross_to_net_married(kids_temp,   0   , wage_h_full_c, t, back)
-    net_income_married_Wue_Hep  = c.ub_w + tax.gross_to_net_married(kids_temp,   0   , wage_h_part_c, t, back)
+    net_income_married_Wue_Hef  = c.ub_w + tax.gross_to_net_married(wife.kids,   0   , wage_h_full_c, t, back)
+    net_income_married_Wue_Hep  = c.ub_w + tax.gross_to_net_married(wife.kids,   0   , wage_h_part_c, t, back)
     ###############
-    net_income_married_Wef_Hue  = c.ub_h + tax.gross_to_net_married(kids_temp, wage_w_full_c,  0         , t, back) - c.childcare_cost * wife.kb5
-    net_income_married_Wef_Hef  =          tax.gross_to_net_married(kids_temp, wage_w_full_c, wage_h_full_c , t, back) - c.childcare_cost * wife.kb5
-    net_income_married_Wef_Hep  =          tax.gross_to_net_married(kids_temp, wage_w_full_c, wage_h_part_c , t, back) - 0.6 * c.childcare_cost * wife.kb5
+    net_income_married_Wef_Hue  = c.ub_h + tax.gross_to_net_married(wife.kids, wage_w_full_c,  0         , t, back) - c.childcare_cost * wife.kb5
+    net_income_married_Wef_Hef  =          tax.gross_to_net_married(wife.kids, wage_w_full_c, wage_h_full_c , t, back) - c.childcare_cost * wife.kb5
+    net_income_married_Wef_Hep  =          tax.gross_to_net_married(wife.kids, wage_w_full_c, wage_h_part_c , t, back) - 0.6 * c.childcare_cost * wife.kb5
     ###################
-    net_income_married_Wep_Hue = c.ub_h + tax.gross_to_net_married(kids_temp, wage_w_part_c,    0       , t, back) - c.childcare_cost * wife.kb5
-    net_income_married_Wep_Hef =          tax.gross_to_net_married(kids_temp, wage_w_part_c, wage_h_full_c, t, back) - c.childcare_cost * wife.kb5
-    net_income_married_Wep_Hep =          tax.gross_to_net_married(kids_temp, wage_w_part_c, wage_h_part_c, t, back) - 0.6 * c.childcare_cost * wife.kb5
+    net_income_married_Wep_Hue = c.ub_h + tax.gross_to_net_married(wife.kids, wage_w_part_c,    0       , t, back) - c.childcare_cost * wife.kb5
+    net_income_married_Wep_Hef =          tax.gross_to_net_married(wife.kids, wage_w_part_c, wage_h_full_c, t, back) - c.childcare_cost * wife.kb5
+    net_income_married_Wep_Hep =          tax.gross_to_net_married(wife.kids, wage_w_part_c, wage_h_part_c, t, back) - 0.6 * c.childcare_cost * wife.kb5
 
     # Childcare affordability check:
     # If childcare costs push net income below ub_w for any wife-employed combination,
@@ -134,17 +132,17 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     # Budget floor of 1.0 on wife-employed options prevents NaN from pow(-inf, alpha0).
     # The computed utility is meaningless for infeasible options - it is overridden to -inf
     # after the utility computation block (see "set utility to -inf for infeasible options" below).
-    budget_c_married_Wue_Hue  = (1-eta)*net_income_married_Wue_Hue * c.scale
-    budget_c_married_Wue_Hef  = (1-eta)*net_income_married_Wue_Hef * c.scale
-    budget_c_married_Wue_Hep  = (1-eta)*net_income_married_Wue_Hep * c.scale
+    budget_c_married_Wue_Hue  = (1-etaw)*net_income_married_Wue_Hue * c.scale
+    budget_c_married_Wue_Hef  = (1-etaw)*net_income_married_Wue_Hef * c.scale
+    budget_c_married_Wue_Hep  = (1-etaw)*net_income_married_Wue_Hep * c.scale
     ############
-    budget_c_married_Wef_Hue  = max(1.0, (1-eta)*net_income_married_Wef_Hue * c.scale)
-    budget_c_married_Wef_Hef  = max(1.0, (1-eta)*net_income_married_Wef_Hef * c.scale)
-    budget_c_married_Wef_Hep  = max(1.0, (1-eta)*net_income_married_Wef_Hep * c.scale)
+    budget_c_married_Wef_Hue  = max(1.0, (1-etaw)*net_income_married_Wef_Hue * c.scale)
+    budget_c_married_Wef_Hef  = max(1.0, (1-etaw)*net_income_married_Wef_Hef * c.scale)
+    budget_c_married_Wef_Hep  = max(1.0, (1-etaw)*net_income_married_Wef_Hep * c.scale)
     ###########
-    budget_c_married_Wep_Hue  = max(1.0, (1-eta)*net_income_married_Wep_Hue * c.scale)
-    budget_c_married_Wep_Hef  = max(1.0, (1-eta)*net_income_married_Wep_Hef * c.scale)
-    budget_c_married_Wep_Hep  = max(1.0, (1-eta)*net_income_married_Wep_Hep * c.scale)
+    budget_c_married_Wep_Hue  = max(1.0, (1-etaw)*net_income_married_Wep_Hue * c.scale)
+    budget_c_married_Wep_Hef  = max(1.0, (1-etaw)*net_income_married_Wep_Hef * c.scale)
+    budget_c_married_Wep_Hep  = max(1.0, (1-etaw)*net_income_married_Wep_Hep * c.scale)
 
     utility_leisure_w = p.alpha2w0 * (c.leisure - c.home_p) + p.alpha2w1 * wife.kids * (c.leisure - c.home_p)
     utility_leisure_w_part = p.alpha2w0 * (c.leisure_part - c.home_p) + p.alpha2w1 * wife.kids * (c.leisure_part - c.home_p)
@@ -158,20 +156,15 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
     elif wife.kids == 0:
         kids_utility = 0
 
-    # utility from pregnancy when married / utility from pregnancy when SINGLE
-    if back ==1:
-        temp_preg = 0
-    else:
-        temp_preg = randn(0, p.sigma_p)
+    # pregnancy preference utility uses temp_preg passed in from caller
+    # (in backward: Gauss-Hermite node; in forward: drawn N(0, sigma_p))
     if wife.age < c.MAX_FERTILITY_AGE:
-        preg_utility = p.preg_married + p.preg_kids * kids_temp + temp_preg
+        preg_utility = p.preg_married + p.preg_kids * wife.kids + temp_preg
     else:
         preg_utility = float('-inf')
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-    if back == 1 or wife.married == 0:
-        temp = 0
-    else:
-        temp = randn(0, p.sigma_q)
+    # match-quality residual `temp` is passed in: zero for new marriages and in singles backward,
+    # GH node in married_couple_emax backward, randn() in forward for continuing marriages.
     if back == 0 and wife.married == 0:
         # draw match quality: low, medium, or high (equal probability)
         mq_draw = uniform()
@@ -394,10 +387,10 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
         #######################################
         wife_ability_index = ability_to_index(wife.ability_i)
         husband_ability_index = ability_to_index(husband.ability_i)
-        if kids_temp < 3:
-            kids_temp_preg = kids_temp + 1   # if pregnant - add another kid to emax, but only up to 3 kids
+        if wife.kids < 3:
+            kids_preg = wife.kids + 1   # if pregnant - add another kid to emax, but only up to 3 kids
         else:
-            kids_temp_preg = 3
+            kids_preg = 3
         # EMAX indices for new dimensions
         kb5 = wife.kb5
         kb5_preg = min(3, wife.kb5 + 1)
@@ -406,25 +399,25 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
         # EMAX by (wife_emp, husband_emp) combination — non-pregnant and pregnant variants
         # w_emax[t, school_w, school_h, kids, ability_w, ability_h, kb5, we, he, mq]
         # (UNEMP, UNEMP) — wife unemployed, husband unemployed
-        emax_w_uu      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.UNEMP, mq]
-        emax_h_uu      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.UNEMP, mq]
-        emax_w_uu_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.UNEMP, mq]
-        emax_h_uu_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.UNEMP, mq]
+        emax_w_uu      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.UNEMP, mq]
+        emax_h_uu      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.UNEMP, mq]
+        emax_w_uu_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.UNEMP, mq]
+        emax_h_uu_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.UNEMP, mq]
         # (UNEMP, EMP) — wife unemployed, husband employed
-        emax_w_ue      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.EMP, mq]
-        emax_h_ue      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.EMP, mq]
-        emax_w_ue_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.EMP, mq]
-        emax_h_ue_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.EMP, mq]
+        emax_w_ue      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.EMP, mq]
+        emax_h_ue      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.UNEMP, c.EMP, mq]
+        emax_w_ue_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.EMP, mq]
+        emax_h_ue_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.UNEMP, c.EMP, mq]
         # (EMP, UNEMP) — wife employed, husband unemployed
-        emax_w_eu      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.UNEMP, mq]
-        emax_h_eu      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.UNEMP, mq]
-        emax_w_eu_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.UNEMP, mq]
-        emax_h_eu_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.UNEMP, mq]
+        emax_w_eu      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.UNEMP, mq]
+        emax_h_eu      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.UNEMP, mq]
+        emax_w_eu_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.UNEMP, mq]
+        emax_h_eu_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.UNEMP, mq]
         # (EMP, EMP) — wife employed, husband employed
-        emax_w_ee      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.EMP, mq]
-        emax_h_ee      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.EMP, mq]
-        emax_w_ee_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.EMP, mq]
-        emax_h_ee_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_temp_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.EMP, mq]
+        emax_w_ee      = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.EMP, mq]
+        emax_h_ee      = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, wife.kids,      wife_ability_index, husband_ability_index, kb5,      c.EMP, c.EMP, mq]
+        emax_w_ee_preg = c.beta0 * w_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.EMP, mq]
+        emax_h_ee_preg = c.beta0 * h_emax[t+1, wife.schooling, husband.schooling, kids_preg, wife_ability_index, husband_ability_index, kb5_preg, c.EMP, c.EMP, mq]
 
         # options 0-1: wife unemployed, husband unemployed (UNEMP, UNEMP)
         u_wife[0]     = uc_wife[0]     + emax_w_uu
@@ -495,7 +488,7 @@ cpdef tuple calculate_utility_married(double[:,:,:,:,:,:,:,:,:,:] w_emax,
         u_husband[13] = float('-inf')
         u_husband[15] = float('-inf')
         u_husband[17] = float('-inf')
-    elif uniform() > c.preg_prob[wife.age - 18]:  # pregnancy probability draw by age
+    elif preg_possible == 0:  # biological pregnancy shock said "no" this period
         u_wife[1] = float('-inf')
         u_wife[3] = float('-inf')
         u_wife[5] = float('-inf')

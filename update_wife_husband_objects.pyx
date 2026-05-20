@@ -127,6 +127,7 @@ cpdef update_married(Husband husband, Wife wife, married_index):
     wife.married = 1
     wife.divorce = 0
     husband.married = 1
+    husband.divorce = 0
     # update employment status wife
     if married_index < 6:   # wife choose unemployment
         wife.emp = 0

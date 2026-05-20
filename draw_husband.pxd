@@ -25,3 +25,5 @@ cpdef Husband draw_husband_back(Wife wife)
 cpdef update_school(Husband husband)        # this function update education in Husnabds structures
 cpdef update_ability_forward(Husband husband)
 cpdef update_ability_back(Husband husband)
+cpdef tuple husband_school_probs(int age)
+cpdef tuple ability_probs()

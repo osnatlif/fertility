@@ -76,7 +76,7 @@ cpdef tuple calculate_utility_single_men(double[:,:,:,:] h_s_emax,
     #            2-singe + employed full  + non-pregnant
     #            4-singe + employed part + non-pregnant
     # husband current utility from each option:
-    divorce_cost_h = p.dc_h + p.dc_h_kids * husband.kids
+    divorce_cost_h = p.dc_h
     ##########################################################################################################
     u_husband_single[1] = float('-inf')    # single husband can't get pregnant
     u_husband_single[3] = float('-inf')    # single husband can't get pregnant

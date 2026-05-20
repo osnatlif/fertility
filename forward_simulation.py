@@ -45,8 +45,19 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
             period = wife.get_age() - 17          # universal period matching backward solution
             age_idx = wife.get_age() - 18         # index for annual moments (0=age18, 37=age55)
             wage_w_full, wage_w_part,_,_,_ = calculate_wage.calculate_wage_w(wife, period)
+
+            # Draw period shocks for this wife: same values are passed to both single_women and married utility,
+            # so the bilateral decision is consistent.
+            temp_q = np.random.normal(0, p.sigma_q) if wife.get_married() == 1 else 0.0
+            temp_preg = np.random.normal(0, p.sigma_p)
+            if wife.get_age() >= c.MAX_FERTILITY_AGE_f or wife.get_kids() == 3:
+                preg_possible = 0
+            else:
+                preg_possible = 1 if np.random.uniform() <= c.preg_prob_f[wife.get_age() - 18] else 0
+
             single_women_value, single_women_index = \
-                calculate_utility_single_women(w_s_emax, wage_w_part, wage_w_full,0, wife, period, u_w_single_full, 0)
+                calculate_utility_single_women(w_s_emax, wage_w_part, wage_w_full,0, wife, period, u_w_single_full, 0,
+                                               temp_preg, preg_possible)
             married_index = -99
             choose_partner = 0
             if wife.get_married() == 0 and wife.get_age() <= 55:    #  if not married - draw potential husband
@@ -60,7 +71,8 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
 
             if wife.get_married() == 1 or choose_partner == 1:
                 wage_h_full, wage_h_part, _, _, _ = calculate_wage.calculate_wage_h(husband, period)
-                calculate_utility_married(w_emax, h_emax, wage_h_part, wage_h_full, wage_w_part, wage_w_full, 0, 0, wife, husband, period, u_wife, u_husband, u_wife_full, u_husband_full, 0)
+                calculate_utility_married(w_emax, h_emax, wage_h_part, wage_h_full, wage_w_part, wage_w_full, 0, 0, wife, husband, period, u_wife, u_husband, u_wife_full, u_husband_full, 0,
+                                          temp_q, temp_preg, preg_possible)
                 single_men_value, single_men_index = calculate_utility_single_men(h_s_emax, wage_h_part, wage_h_full, 0, husband, period, u_h_single_full, 0)
                 temp_husband = np.asarray(u_husband)
                 temp_wife = np.asarray(u_wife)
@@ -171,10 +183,21 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
 
             if husband.get_married() == 1 or choose_partner == 1:
                 wage_w_full, wage_w_part, _, _, _ = calculate_wage.calculate_wage_w(wife, period)
+
+                # Draw shocks for the wife in this period (consistent between married and single_women calls).
+                temp_q = np.random.normal(0, p.sigma_q) if wife.get_married() == 1 else 0.0
+                temp_preg = np.random.normal(0, p.sigma_p)
+                if wife.get_age() >= c.MAX_FERTILITY_AGE_f or wife.get_kids() == 3:
+                    preg_possible = 0
+                else:
+                    preg_possible = 1 if np.random.uniform() <= c.preg_prob_f[wife.get_age() - 18] else 0
+
                 calculate_utility_married(
-                    w_emax, h_emax, wage_h_part, wage_h_full, wage_w_part, wage_w_full, 0,0, wife, husband, period, u_wife, u_husband, u_wife_full, u_husband_full, 0)
+                    w_emax, h_emax, wage_h_part, wage_h_full, wage_w_part, wage_w_full, 0,0, wife, husband, period, u_wife, u_husband, u_wife_full, u_husband_full, 0,
+                    temp_q, temp_preg, preg_possible)
                 single_women_value, single_women_index = calculate_utility_single_women(
-                    w_s_emax, wage_w_part, wage_w_full,0, wife, period, u_w_single_full, 0)
+                    w_s_emax, wage_w_part, wage_w_full,0, wife, period, u_w_single_full, 0,
+                    temp_preg, preg_possible)
                 weighted_utility = float('-inf')
                 married_index = -99
                 for i in range(0, 18):

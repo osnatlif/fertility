@@ -130,12 +130,38 @@ cohort_f = cohort
 bp_f = bp
 N_AGE_GROUPS_f = N_AGE_GROUPS
 AGE_VALUES_f = [18, 20, 22]  # entry ages for 3 education levels: HS, SC, CG+
+MAX_FERTILITY_AGE_f = MAX_FERTILITY_AGE
+# Python-accessible copy of preg_prob; populated below after the cdef array is filled
+preg_prob_f = None
 
 # pregnancy probability by age (index 0 = age 18, index 1 = age 19, ..., index 26 = age 44)
 _preg_prob_data = np.loadtxt("input/preg_prob" + cohorts.cohort + ".txt")
 cdef double[39] preg_prob
 for _i in range(39):
     preg_prob[_i] = _preg_prob_data[_i]
+preg_prob_f = _preg_prob_data.copy()
 
 # childcare cost per child below 5 (annual) - applies when mother works full-time or part-time
 cdef double childcare_cost = 5000.0
+
+# Gauss-Hermite quadrature nodes/weights for integrating against N(0,1).
+# E[f(Z)] for Z ~ N(0,1) is approximately sum_i gh_weights[i] * f(gh_nodes[i]).
+# For ε ~ N(0, σ²): use σ*gh_nodes[i] in place of f's argument.
+# Exact for polynomials of degree <= 2*N_GH-1.
+cdef int N_GH = 3         # nodes for `temp` (match-quality residual) integration
+cdef int N_GH_PREG = 3    # nodes for `temp_preg` (pregnancy preference) integration
+cdef double[3] gh_nodes
+cdef double[3] gh_weights
+cdef double[3] gh_nodes_preg
+cdef double[3] gh_weights_preg
+_gh_x, _gh_w = np.polynomial.hermite_e.hermegauss(3)
+# hermegauss integrates against exp(-x^2/2), so divide by sqrt(2*pi) to get
+# the standard-normal expectation (weights then sum to 1).
+_norm = np.sqrt(2.0 * np.pi)
+for _i in range(3):
+    gh_nodes[_i] = _gh_x[_i]
+    gh_weights[_i] = _gh_w[_i] / _norm
+_gh_x_p, _gh_w_p = np.polynomial.hermite_e.hermegauss(3)
+for _i in range(3):
+    gh_nodes_preg[_i] = _gh_x_p[_i]
+    gh_weights_preg[_i] = _gh_w_p[_i] / _norm

@@ -12,7 +12,8 @@ from draw_wife cimport Wife
 from value_to_index cimport ability_to_index
 
 cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
-        double wage_w_part, double wage_w_full, double tmp_w_full, Wife wife, int t, double[:] u_wife_full, int back):
+        double wage_w_part, double wage_w_full, double tmp_w_full, Wife wife, int t, double[:] u_wife_full, int back,
+        double temp_preg, int preg_possible):
 
     cdef double alimony_sum = 0
     cdef double net_income_single_w_ue = 0
@@ -33,7 +34,6 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     cdef int single_index = 0
     cdef double utility_kids = 0
     cdef double utility_leisure = 0
-    cdef double temp
     cdef int kb5
     cdef int kb5_preg
 
@@ -41,11 +41,6 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     ###################################################################################################
     #      calculate utility for single women
     ###################################################################################################
-    if back == 1:
-        temp = 1
-    else:
-        temp = uniform()
-
     if back == 1:
         wage_w_full_c = tmp_w_full
         wage_w_part_c = tmp_w_full * 0.5
@@ -106,11 +101,7 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     else:
         assert False
 
-    if back == 1:
-        temp_preg = 0
-    else:
-        temp_preg = randn(0, p.sigma_p)
-
+    # temp_preg is passed in: Gauss-Hermite node in backward, randn() in forward
     if wife.age < c.MAX_FERTILITY_AGE:
         preg_utility_um = p.preg_unmarried + p.preg_kids * wife.kids  + temp_preg
     else:
@@ -127,7 +118,7 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     #            5-single + employed part + pregnant   - zero for men
     #
     # wife current utility from each option:
-    divorce_cost_w = p.dc_w + p.dc_w_kids * wife.kids
+    divorce_cost_w = p.dc_w
     u_wife_single[0] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ue, p.alpha0) + \
         utility_leisure + p.alpha3_w_s * kids_utility + divorce_cost_w * wife.married
     if wife.age < c.MAX_FERTILITY_AGE:
@@ -211,7 +202,7 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
         u_wife[1] = float('-inf')
         u_wife[3] = float('-inf')
         u_wife[5] = float('-inf')
-    elif uniform() > c.preg_prob[wife.age - 18]:  # pregnancy probability draw by age
+    elif preg_possible == 0:  # biological pregnancy shock said "no" this period
         u_wife[1] = float('-inf')
         u_wife[3] = float('-inf')
         u_wife[5] = float('-inf')

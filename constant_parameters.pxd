@@ -59,3 +59,9 @@ cdef int num_cohort
 cdef double home_p
 cdef double[39] preg_prob  # pregnancy probability by age, index 0=age18 to index 38=age56
 cdef double childcare_cost  # annual childcare cost per child below 5
+cdef int N_GH         # number of GH nodes for `temp` (match-quality residual)
+cdef int N_GH_PREG    # number of GH nodes for `temp_preg` (pregnancy preference)
+cdef double[3] gh_nodes
+cdef double[3] gh_weights
+cdef double[3] gh_nodes_preg
+cdef double[3] gh_weights_preg

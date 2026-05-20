@@ -46,6 +46,7 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
     if verbose:
         print("====================== single women:  ======================")
     cdef draw_wife.Wife wife = draw_wife.Wife()
+    cdef draw_husband.Husband husband
     wife.age = 17 + t
     for school in range(0, c.school_size):   # loop over school
         if 17 + t < c.AGE_VALUES[school]:   # education level hasn't started yet at this age
@@ -57,7 +58,6 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
             for ability in range(0, c.ability_size):     # for each ability level: low, medium, high - open loop of ability
                 wife.ability_i = ability
                 wife.ability_value = c.ability_vector[ability] * p.sigma_ability_w  # wife ability - low, medium, high
-                draw_wife.update_ability_back(wife)
                 for kb5 in range(0, c.kids_below_5_size):
                     if kb5 > kids:
                         continue
@@ -69,50 +69,94 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
                         iter_count = iter_count + 1
                         if verbose:
                             print(wife)
-                        for draw in range(0, c.DRAW_B):
-                            married_index = -99
-                            choose_partner = 0
-                            _, _, prob_full_w, prob_part_w, tmp_full_w = calculate_wage.calculate_wage_w(wife, t)
-                            single_women_value, _ = calculate_utility_single_women(
-                                w_s_emax, 0, 0, tmp_full_w, wife, t, u_w_single_full, 1)
 
-                            prob_meet_potential_partner = meeting_partner.prob(wife.age)
+                        # Things that depend only on the wife's state.
+                        _, _, prob_full_w, prob_part_w, tmp_full_w = calculate_wage.calculate_wage_w(wife, t)
+                        prob_meet_potential_partner = meeting_partner.prob(wife.age)
 
-                            husband = draw_husband.draw_husband_back(wife)
-                            _, _, prob_full_h, prob_part_h, tmp_full_h = calculate_wage.calculate_wage_h(husband, t)
-                            calculate_utility_married(w_emax, h_emax, 0, 0, 0, 0, tmp_full_h, tmp_full_w, wife, husband, t,
-                                    u_wife, u_husband, u_wife_full, u_husband_full, 1)
-                            single_men_value, _ = calculate_utility_single_men(
-                                h_s_emax, 0, 0, tmp_full_h, husband, t, u_h_single_full, 1)
+                        # biological pregnancy enumeration is conditional on hard cap
+                        if wife.age >= c.MAX_FERTILITY_AGE or kids == 3:
+                            preg_pr = 0.0
+                        else:
+                            preg_pr = c.preg_prob[wife.age - 18]
 
-                            # bilateral comparison - find best married option where both prefer marriage
-                            weighted_utility = float('-inf')
-                            married_index = -99
-                            for i in range(0, 18):
-                                if u_wife[i] > single_women_value and u_husband[i] > single_men_value:
-                                    if c.bp * u_wife[i] + (1 - c.bp) * u_husband[i] > weighted_utility:
-                                        weighted_utility = c.bp * u_wife[i] + (1 - c.bp) * u_husband[i]
-                                        married_index = i
+                        # Build husband object (state to be set inside enumeration).
+                        p_hs, p_sc, p_cg = draw_husband.husband_school_probs(wife.age)
+                        p_low, p_med, p_high = draw_husband.ability_probs()
+                        husband = draw_husband.Husband()
+                        husband.age = wife.age
+                        if husband.age > 24:
+                            husband.emp = 1
+                            husband.capacity = 1
+                        else:
+                            husband.emp = 0
+                            husband.capacity = 0
 
-                            # calculate single outside option
-                            # single options:
-                            #            0-single + unemployed + non-pregnant
-                            #            1-single + unemployed + pregnant - zero for men
-                            #            2-single + employed full  + non-pregnant
-                            #            3-single + employed full  + pregnant   - zero for men
-                            #            4-single + employed part + non-pregnant
-                            #            5-single + employed part + pregnant   - zero for men
-                            single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3], 4) + \
-                                                        prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5], 4) + \
-                                                        (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1], 2)
-
-                            if married_index > -99:
-                                temp = prob_meet_potential_partner * u_wife[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
+                        for husband_school in range(0, c.school_size):
+                            if husband_school == 0:
+                                prob_s = p_hs
+                            elif husband_school == 1:
+                                prob_s = p_sc
                             else:
-                                temp = single_outside_option
-                            sum_emax += temp
-                        # end draw backward loop
+                                prob_s = p_cg
+                            husband.schooling = husband_school
+                            draw_husband.update_school(husband)
+                            for husband_ability in range(0, c.ability_size):
+                                if husband_ability == 0:
+                                    prob_a = p_low
+                                elif husband_ability == 1:
+                                    prob_a = p_med
+                                else:
+                                    prob_a = p_high
+                                husband.ability_i = husband_ability
+                                husband.ability_value = c.ability_vector[husband_ability] * p.sigma_ability_h
 
-                        w_s_emax[t][school][kids][ability][kb5][we] = sum_emax / c.DRAW_B
+                                # husband wage and single_men_value: not a function of (temp_preg, biological)
+                                _, _, prob_full_h, prob_part_h, tmp_full_h = calculate_wage.calculate_wage_h(husband, t)
+                                single_men_value, _ = calculate_utility_single_men(
+                                    h_s_emax, 0, 0, tmp_full_h, husband, t, u_h_single_full, 1)
+
+                                # Quadrature over temp_preg (continuous) and biological pregnancy (Bernoulli).
+                                # temp (match-quality residual) is 0 here -- new marriage.
+                                for i_p in range(c.N_GH_PREG):
+                                    temp_preg = c.gh_nodes_preg[i_p] * p.sigma_p
+                                    w_p = c.gh_weights_preg[i_p]
+                                    for biological in range(2):
+                                        if preg_pr == 0.0 and biological == 1:
+                                            continue
+                                        if biological == 1:
+                                            w_bio = preg_pr
+                                        else:
+                                            w_bio = 1.0 - preg_pr
+                                        weight = w_p * w_bio
+                                        if weight == 0.0:
+                                            continue
+
+                                        calculate_utility_married(w_emax, h_emax, 0, 0, 0, 0, tmp_full_h, tmp_full_w, wife, husband, t,
+                                                u_wife, u_husband, u_wife_full, u_husband_full, 1,
+                                                0.0, temp_preg, biological)
+                                        single_women_value, _ = calculate_utility_single_women(
+                                            w_s_emax, 0, 0, tmp_full_w, wife, t, u_w_single_full, 1,
+                                            temp_preg, biological)
+                                        single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3], 4) + \
+                                                                prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5], 4) + \
+                                                                (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1], 2)
+
+                                        # bilateral comparison
+                                        weighted_utility = float('-inf')
+                                        married_index = -99
+                                        for i in range(0, 18):
+                                            if u_wife[i] > single_women_value and u_husband[i] > single_men_value:
+                                                if c.bp * u_wife[i] + (1 - c.bp) * u_husband[i] > weighted_utility:
+                                                    weighted_utility = c.bp * u_wife[i] + (1 - c.bp) * u_husband[i]
+                                                    married_index = i
+
+                                        if married_index > -99:
+                                            value = prob_meet_potential_partner * u_wife[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
+                                        else:
+                                            value = single_outside_option
+                                        sum_emax += prob_s * prob_a * weight * value
+
+                        w_s_emax[t][school][kids][ability][kb5][we] = sum_emax
 
     return iter_count

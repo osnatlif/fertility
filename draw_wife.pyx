@@ -89,30 +89,34 @@ cpdef update_wife_schooling(Wife wife):
 
 
 cpdef update_ability_forward(Wife wife):
-    cdef double temp_high_ability
-    cdef double temp_medium_ability
-    cdef double prob_high_ability
-    cdef double prob_medium_ability
-    cdef double temp
-    temp_high_ability = p.ab_high
-    temp_medium_ability = p.ab_medium
-    prob_high_ability = cmath.exp(temp_high_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
-    prob_medium_ability = cmath.exp(temp_medium_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
-    temp = uniform()
-    if temp < prob_high_ability:
-        wife.ability_i = 2
-        wife.ability_value = c.normal_vector[2] * p.sigma_ability_w
-    elif temp < prob_medium_ability + prob_high_ability:
+    # uniform 1/3 over (low, medium, high)
+    cdef double temp = uniform()
+    if temp < 1.0/3.0:
+        wife.ability_i = 0
+        wife.ability_value = c.normal_vector[0] * p.sigma_ability_w
+    elif temp < 2.0/3.0:
         wife.ability_i = 1
         wife.ability_value = c.normal_vector[1] * p.sigma_ability_w
     else:
-        wife.ability_i = 0
-        wife.ability_value = c.normal_vector[0] * p.sigma_ability_w
+        wife.ability_i = 2
+        wife.ability_value = c.normal_vector[2] * p.sigma_ability_w
     return
 
 cpdef update_ability_back(Wife wife):
     wife.ability_i = 1
     wife.ability_value = c.normal_vector[1] * p.sigma_ability_w
+
+
+cpdef tuple wife_school_probs(int age):
+    # probabilities of wife schooling (HS, SC, CG+) at a given age,
+    # from the empirical female education distribution
+    cdef int age_idx = min(age - 18, <int>_edu_dist_f.shape[0] - 1)
+    if age_idx < 0:
+        age_idx = 0
+    cdef double prob_hs = _edu_dist_f[age_idx, 1]
+    cdef double prob_sc = _edu_dist_f[age_idx, 2]
+    cdef double prob_cg = 1.0 - prob_hs - prob_sc
+    return prob_hs, prob_sc, prob_cg
 
 cpdef Wife draw_wife(Husband husband):
     cdef Wife result = Wife()

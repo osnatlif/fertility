@@ -78,25 +78,17 @@ cpdef update_school(Husband husband):         # this function update education i
 
 
 cpdef update_ability_forward(Husband husband):
-    cdef double temp_high_ability
-    cdef double temp_medium_ability
-    cdef double prob_high_ability
-    cdef double prob_medium_ability
-    cdef double temp
-    temp_high_ability = p.ab_high
-    temp_medium_ability = p.ab_medium
-    prob_high_ability = cmath.exp(temp_high_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
-    prob_medium_ability = cmath.exp(temp_medium_ability) / (1 + cmath.exp(temp_high_ability) + cmath.exp(temp_medium_ability))
-    temp = uniform()
-    if temp < prob_high_ability:
-        husband.ability_i = 2
-        husband.ability_value = c.normal_vector[2] * p.sigma_ability_h
-    elif temp < prob_medium_ability + prob_high_ability:
+    # uniform 1/3 over (low, medium, high)
+    cdef double temp = uniform()
+    if temp < 1.0/3.0:
+        husband.ability_i = 0
+        husband.ability_value = c.normal_vector[0] * p.sigma_ability_h
+    elif temp < 2.0/3.0:
         husband.ability_i = 1
         husband.ability_value = c.normal_vector[1] * p.sigma_ability_h
     else:
-        husband.ability_i = 0
-        husband.ability_value = c.normal_vector[0] * p.sigma_ability_h
+        husband.ability_i = 2
+        husband.ability_value = c.normal_vector[2] * p.sigma_ability_h
     return
 
 cpdef update_ability_back(Husband husband):
@@ -150,3 +142,22 @@ cpdef Husband draw_husband_back(Wife wife):
         result.emp = 1
         result.capacity =1
     return result
+
+
+cpdef tuple husband_school_probs(int age):
+    # probabilities of husband schooling (HS, SC, CG+) at a given age,
+    # from the empirical male education distribution
+    cdef int age_idx = min(age - 18, <int>_edu_dist_m.shape[0] - 1)
+    if age_idx < 0:
+        age_idx = 0
+    cdef double prob_hs = _edu_dist_m[age_idx, 1]
+    cdef double prob_sc = _edu_dist_m[age_idx, 2]
+    cdef double prob_cg = 1.0 - prob_hs - prob_sc
+    return prob_hs, prob_sc, prob_cg
+
+
+cpdef tuple ability_probs():
+    # uniform 1/3 over (low, medium, high). Same distribution applies to both
+    # husbands and wives -- only the sigma differs in the ability value.
+    cdef double third = 1.0 / 3.0
+    return third, third, third

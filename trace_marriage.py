@@ -19,8 +19,6 @@ print(f"  taste_w_down (w more educ)   = {p.taste_w_down:10.3f}")
 print(f"  mc (marriage cost)           = {p.mc:10.3f}")
 print(f"  dc_w (divorce cost wife)     = {p.dc_w:10.3f}")
 print(f"  dc_h (divorce cost husband)  = {p.dc_h:10.3f}")
-print(f"  dc_w_kids (divorce cost/kid) = {p.dc_w_kids:10.3f}")
-print(f"  dc_h_kids (divorce cost/kid) = {p.dc_h_kids:10.3f}")
 print(f"  sigma_q (match quality shock) = {p.sigma_q:10.3f}  (exp(1.98))")
 print(f"  match_vector = [-1.15, 0, 1.15]")
 print(f"  alpha3_w_m (wife kids married) = {p.alpha3_w_m:10.6f}")
@@ -111,20 +109,17 @@ for age in range(18, 47):
 print()
 print("=" * 80)
 print("DIVORCE COST ANALYSIS")
-print("  Divorce cost increases with kids, making divorce harder with kids")
+print("  Divorce cost is a constant, independent of kids")
 print("=" * 80)
-for kids in range(4):
-    dc_w = p.dc_w + p.dc_w_kids * kids
-    dc_h = p.dc_h + p.dc_h_kids * kids
-    print(f"  {kids} kids: wife divorce cost = {dc_w:8.1f}, husband divorce cost = {dc_h:8.1f}")
+print(f"  wife divorce cost = {p.dc_w:8.1f}, husband divorce cost = {p.dc_h:8.1f}")
 
 print()
 print("=" * 80)
 print("ALREADY-MARRIED: CONTINUE vs DIVORCE (wife, HS-HS, medium MQ)")
 print("  Already married with 2 kids")
 print("=" * 80)
-print(f"  {'age':>4} {'taste+mq':>10} {'emax_m':>10} {'emax_s':>10} {'emax_diff':>10} {'dc_2kids':>10} {'net_m-s':>10}")
-dc_w_2kids = p.dc_w + p.dc_w_kids * 2  # divorce cost with 2 kids
+print(f"  {'age':>4} {'taste+mq':>10} {'emax_m':>10} {'emax_s':>10} {'emax_diff':>10} {'dc_w':>10} {'net_m-s':>10}")
+dc_w = p.dc_w  # constant divorce cost (kids term removed)
 for age in range(22, 47):
     t = age - 17
     if t < 39:
@@ -142,5 +137,5 @@ for age in range(22, 47):
     # married_util ≈ taste + cons_married + emax_married
     # single_util ≈ cons_single + emax_single + dc  (dc is negative, making single worse)
     # So advantage = taste + emax_diff - dc (because dc makes single worse)
-    advantage = taste_mq + emax_diff - dc_w_2kids  # dc is negative, so minus negative = positive
-    print(f"  {age:4d} {taste_mq:10.1f} {emax_m_w:10.1f} {emax_s_w:10.1f} {emax_diff:10.1f} {dc_w_2kids:10.1f} {advantage:10.1f}")
+    advantage = taste_mq + emax_diff - dc_w  # dc is negative, so minus negative = positive
+    print(f"  {age:4d} {taste_mq:10.1f} {emax_m_w:10.1f} {emax_s_w:10.1f} {emax_diff:10.1f} {dc_w:10.1f} {advantage:10.1f}")
