@@ -26,6 +26,10 @@ cdef class Wife:
         return self.divorce
     def get_capacity(self):
         return self.capacity
+    def get_ability_i(self):
+        return self.ability_i
+    def get_kb5(self):
+        return self.kb5
     def get_married(self):
         return self.married
     def set_divorce(self, state):
@@ -55,7 +59,9 @@ cdef class Wife:
         self.age_second_child = 0
         self.age_third_child = 0
         self.kb5 = 0
+        self.kb18 = 0
         self.match_quality = 0
+        self.experience = 0.0
     def __str__(self):
         return "Wife\n\tyears of Schooling: " + str(self.years_of_schooling) + "\n\tSchooling: " + str(self.schooling) + "\n\tSchooling Map: " + str(self.hs) + \
                "," + str(self.sc) + "," + str(self.cg) + \
@@ -65,6 +71,27 @@ cdef class Wife:
                "\n\tDivorce: " + str(self.divorce)+  \
                "\n\tPregnant: " + str(self.preg) + "\n\tmother education: " + str(self.mother_educ) + "\n\tmother marital: " + str(self.mother_marital) + \
                "\n\tCapacity: " + str(self.capacity) + "\n\tEmployment: " + str(self.emp)
+
+
+cpdef initialize_wife_kids(Wife wife, int init_kids):
+    # Initialize wife.kids + kid ages + kb5 + kb18 at forward-sim entry.
+    # 1 kid: age 1. 2 kids: older 2, younger 1. All entry kids are <5 and <18,
+    # so kb5 = kb18 = kids. See appendix_initial_conditions.tex.
+    if init_kids == 0:
+        return
+    elif init_kids == 1:
+        wife.kids = 1
+        wife.age_first_child = 1
+        wife.kb5 = 1
+        wife.kb18 = 1
+    elif init_kids == 2:
+        wife.kids = 2
+        wife.age_first_child = 2
+        wife.age_second_child = 1
+        wife.kb5 = 2
+        wife.kb18 = 2
+    else:
+        assert False, ("invalid initial kid count", init_kids)
 
 
 cpdef update_wife_schooling(Wife wife):
@@ -137,7 +164,11 @@ cpdef Wife draw_wife(Husband husband):
     if result.age > 24:
         result.emp = 1
         result.capacity = 1
-
+    # assume she's been working full-time since age 22 (so exp = age - 22, floored at 0)
+    if result.age > 22:
+        result.experience = <double>(result.age - 22)
+    else:
+        result.experience = 0.0
     return result
 
 
@@ -162,4 +193,9 @@ cpdef Wife draw_wife_back(Husband husband):
     if result.age > 24 :
         result.emp = 1
         result.capacity =1
+    # same age-based experience rule as forward draw_wife
+    if result.age > 22:
+        result.experience = <double>(result.age - 22)
+    else:
+        result.experience = 0.0
     return result

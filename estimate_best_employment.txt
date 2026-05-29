@@ -1,0 +1,17 @@
+# best objective: 1981.4896  (4 evals)
+p.alpha2w0 = 0.806960
+p.alpha2w1 = 0.153772
+p.alpha2h0 = 0.525000
+p.alpha2h1 = 0.100000
+p.lambda0_w_ft = -1.319953
+p.lambda1_w_ft = 0.031040
+p.lambda15_w_ft = 0.000000
+p.lambda2_w_ft = 0.300000
+p.lambda0_w_pt = -2.297200
+p.lambda1_w_pt = 0.001000
+p.lambda15_w_pt = 0.000000
+p.lambda2_w_pt = 0.002400
+p.lambda0_w_f = 1.252890
+p.lambda1_w_f = 0.049000
+p.lambda15_w_f = 0.000000
+p.lambda2_w_f = 0.180000

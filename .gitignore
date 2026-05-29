@@ -17,3 +17,6 @@ h_emax*
 w_s_emax*
 w_emax*
 *.xlsx
+*.log
+*bak
+*.csv

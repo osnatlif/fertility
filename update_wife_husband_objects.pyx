@@ -49,9 +49,21 @@ cpdef update_wife_kids_age(Wife wife):
     if wife.age_third_child > 0 and wife.age_third_child <= 5:
         count += 1
     wife.kb5 = count
+    # count kids below 18 (minors, for child-benefit eligibility in FORWARD)
+    cdef int count18 = 0
+    if wife.age_first_child > 0 and wife.age_first_child < 18:
+        count18 += 1
+    if wife.age_second_child > 0 and wife.age_second_child < 18:
+        count18 += 1
+    if wife.age_third_child > 0 and wife.age_third_child < 18:
+        count18 += 1
+    wife.kb18 = count18
     assert 0 <= wife.kids <= 3, ("invalid wife.kids", wife.kids)
     assert 0 <= wife.kb5 <= 3, ("invalid wife.kb5", wife.kb5)
     assert wife.kb5 <= wife.kids, ("kb5 > kids", wife.kb5, wife.kids)
+    assert 0 <= wife.kb18 <= 3, ("invalid wife.kb18", wife.kb18)
+    assert wife.kb5 <= wife.kb18, ("kb5 > kb18", wife.kb5, wife.kb18)
+    assert wife.kb18 <= wife.kids, ("kb18 > kids", wife.kb18, wife.kids)
 
 
 cpdef update_wife_single(Wife wife, single_women_index):
@@ -69,6 +81,8 @@ cpdef update_wife_single(Wife wife, single_women_index):
     else:
         wife.emp = 0
         wife.capacity = 0
+    # advance wife's labor-market experience by her chosen capacity (0 / 0.5 / 1)
+    wife.experience = wife.experience + wife.capacity
     if single_women_index in single_women_pregnancy_index_array:   # choose to have another child
         wife.preg = 1
     else:
@@ -140,6 +154,8 @@ cpdef update_married(Husband husband, Wife wife, married_index):
         wife.capacity = 0.5
     else:
         assert()
+    # advance wife's labor-market experience by her chosen capacity (0 / 0.5 / 1)
+    wife.experience = wife.experience + wife.capacity
     # update employment status husband
     if married_index in men_unemployed_index_array:    # men unemployed
         husband.emp = 0

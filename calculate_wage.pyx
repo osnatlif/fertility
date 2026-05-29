@@ -10,6 +10,11 @@ from draw_wife cimport Wife
 
 cpdef tuple calculate_wage_w(Wife wife, int t):
     # this function calculates wives actual wage
+    # `t` is kept in the signature for the husband's wage call symmetry but is
+    # no longer used inside the wife's wage / offer probability / not-laid-off
+    # equations -- those now use `wife.experience` (years of actual work).
+    # In backward, `wife.experience` is set to the grid value before the call;
+    # in forward, it's the wife's accumulated continuous experience.
     cdef double wage_full = 0
     cdef double wage_part = 0
     cdef double prob_full_tmp
@@ -21,20 +26,21 @@ cpdef tuple calculate_wage_w(Wife wife, int t):
     cdef double prob_not_laid_off_w
     cdef int full_time_offer = 0
     cdef int part_time_offer = 0
+    cdef double exp_w = wife.experience
     tmp_full = p.beta0_w * wife.ability_value + \
-           p.beta11_w * t * wife.hs + \
-           p.beta12_w * t * wife.sc + \
-           p.beta13_w * t * wife.cg + \
-           p.beta21_w * t * t * wife.hs + \
-           p.beta22_w * t * t * wife.sc + \
-           p.beta23_w * t * t * wife.cg + \
+           p.beta11_w * exp_w * wife.hs + \
+           p.beta12_w * exp_w * wife.sc + \
+           p.beta13_w * exp_w * wife.cg + \
+           p.beta21_w * exp_w * exp_w * wife.hs + \
+           p.beta22_w * exp_w * exp_w * wife.sc + \
+           p.beta23_w * exp_w * exp_w * wife.cg + \
            p.beta41_w * (1-wife.emp) * wife.hs + \
            p.beta42_w * (1-wife.emp) * wife.sc + \
            p.beta43_w * (1-wife.emp) * wife.cg + \
            p.beta31_w * wife.hs + p.beta32_w * wife.sc + p.beta33_w * wife.cg
 
-    prob_full_tmp = p.lambda0_w_ft + p.lambda1_w_ft * t + p.lambda15_w_ft * t * t + p.lambda2_w_ft * wife.schooling
-    prob_part_tmp = p.lambda0_w_pt + p.lambda1_w_pt * t + p.lambda15_w_pt * t * t + p.lambda2_w_pt * wife.schooling
+    prob_full_tmp = p.lambda0_w_ft + p.lambda1_w_ft * exp_w + p.lambda15_w_ft * exp_w * exp_w + p.lambda2_w_ft * wife.schooling
+    prob_part_tmp = p.lambda0_w_pt + p.lambda1_w_pt * exp_w + p.lambda15_w_pt * exp_w * exp_w + p.lambda2_w_pt * wife.schooling
     prob_full_w = cmath.exp(prob_full_tmp) / (1 + cmath.exp(prob_full_tmp))
     prob_part_w = cmath.exp(prob_part_tmp) / (1 + cmath.exp(prob_part_tmp))
 
@@ -50,7 +56,7 @@ cpdef tuple calculate_wage_w(Wife wife, int t):
         if part_time_offer:
             wage_part = 0.5 * cmath.exp(tmp_full + tmp)
     else:   #    wife.emp == c.EMP - worked in previous period
-        prob_not_laid_off_tmp = p.lambda0_w_f + p.lambda1_w_f*t + p.lambda15_w_f*t*t + p.lambda2_w_f*wife.schooling
+        prob_not_laid_off_tmp = p.lambda0_w_f + p.lambda1_w_f*exp_w + p.lambda15_w_f*exp_w*exp_w + p.lambda2_w_f*wife.schooling
         prob_not_laid_off_w = cmath.exp(prob_not_laid_off_tmp)/(1+ cmath.exp(prob_not_laid_off_tmp))
         if uniform()  < prob_not_laid_off_w:
             if wife.capacity == 1:  # worked in previous period full time

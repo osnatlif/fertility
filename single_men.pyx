@@ -14,9 +14,9 @@ from calculate_utility_married cimport calculate_utility_married
 from calculate_utility_single_men cimport calculate_utility_single_men
 
 
-cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :] w_emax,
-    double[:, :, :, :, :, :, :, :, :, :] h_emax,
-    double[:,:,:,:,:,:] w_s_emax,
+cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
+    double[:, :, :, :, :, :, :, :, :, :, :] h_emax,
+    double[:,:,:,:,:,:,:] w_s_emax,
     double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double sum_emax = 0

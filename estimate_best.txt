@@ -1,0 +1,17 @@
+# best objective: 2018.5355  (84 evals)
+p.dc_w = -199.778011
+p.dc_h = -354.757041
+p.taste_hs = 117.958767
+p.taste_sc = 153.375296
+p.taste_cg = 287.385238
+p.mconst1_h = 97.385622
+p.mconst1_w = 80.407424
+p.mconst2_h = 81.564801
+p.mconst2_w = 40.427559
+p.alpha3_w_m = 27.432655
+p.alpha3_w_s = 2.992605
+p.alpha3_h_m = 55.615653
+p.alpha2w0 = 0.806960
+p.alpha2w1 = 0.153772
+p.sigma_q = 0.558117
+p.omega3 = -1.212918

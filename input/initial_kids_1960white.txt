@@ -1,0 +1,8 @@
+# Initial-kids distribution at entry age, by education level.
+# Rows: HS (entry age 18), SC (entry age 20), CG+ (entry age 22).
+# Columns: P(kids=0), P(kids=1), P(kids=2).
+# At entry, P(kids=3) is taken to be 0.
+# See appendix_initial_conditions.tex for the methodology used to obtain these values.
+0.7559 0.1159 0.1282
+0.9050 0.0694 0.0255
+0.9668 0.0299 0.0033

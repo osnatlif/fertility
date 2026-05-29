@@ -80,9 +80,6 @@ cdef double scale = 0.707  # fraction of public consumption
 cdef double bp = 0.5       # bargaining power
 cdef int GRID = 3
 cdef int AGE = 18          # initial age
-cdef int constant_welfare = 4000   # before 97
-cdef int by_kids_welfare = 1000    # before 97
-cdef double by_income_welfare = -0.19  # before 97
 ###########################
 #   BY COHORT CONSTANTS   #
 ###########################
@@ -96,7 +93,7 @@ cdef double cb_const
 cdef double cb_per_child
 
 if cohort == 1960:
-    cb_const = 4317.681 # child benefit for single mom + 1 kid - annually
+    cb_const = 3000.0 # child benefit for single mom + 1 kid - annually (was 4317.681; scaled down to dampen HS unwed-fertility incentive)
     cb_per_child = 1517.235
 elif cohort == 1985:
     cb_const = 4530.784 # child benefit for single mom + 1 kid - annually
@@ -143,6 +140,17 @@ preg_prob_f = _preg_prob_data.copy()
 
 # childcare cost per child below 5 (annual) - applies when mother works full-time or part-time
 cdef double childcare_cost = 5000.0
+
+# Wife labor-market experience grid (years). Backward solves at these 4 values.
+# Forward simulation tracks `wife.experience` continuously (+1 if FT, +0.5 if PT)
+# and maps via experience_to_index() to a grid index for EMAX lookups.
+# Midpoint bucket cuts: 2.5, 5.5, 10.5.
+cdef int N_EXP = 4
+cdef double[4] exp_grid
+exp_grid[0] = 1.0
+exp_grid[1] = 4.0
+exp_grid[2] = 8.0
+exp_grid[3] = 12.0
 
 # Gauss-Hermite quadrature nodes/weights for integrating against N(0,1).
 # E[f(Z)] for Z ~ N(0,1) is approximately sum_i gh_weights[i] * f(gh_nodes[i]).

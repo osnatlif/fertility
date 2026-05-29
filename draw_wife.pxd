@@ -25,9 +25,12 @@ cdef class Wife:
     cdef int age_second_child
     cdef int age_third_child
     cdef int kb5                       # number of kids below 5
+    cdef int kb18                      # number of kids below 18 (minor, for cb eligibility in FORWARD)
     cdef double match_quality
     cdef int match_quality_i
+    cdef public double experience     # actual years of labor-market experience (continuous)
 cpdef update_wife_schooling(Wife wife)
+cpdef initialize_wife_kids(Wife wife, int init_kids)
 
 # update wife's ability
 #cpdef update_ability(int ability, Wife wife)

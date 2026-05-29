@@ -14,6 +14,8 @@ _edu_dist_m = np.loadtxt("input/education_dist_m" + cohort + ".txt")
 cdef class Husband:
     def get_capacity(self):
         return self.capacity
+    def get_ability_i(self):
+        return self.ability_i
     def get_schooling(self):
         return self.schooling
     def get_age(self):

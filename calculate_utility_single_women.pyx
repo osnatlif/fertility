@@ -9,9 +9,9 @@ cdef extern from "randn.cc":
     double uniform()
     int argmax(double arr[], int len)
 from draw_wife cimport Wife
-from value_to_index cimport ability_to_index
+from value_to_index cimport ability_to_index, experience_to_index
 
-cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
+cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
         double wage_w_part, double wage_w_full, double tmp_w_full, Wife wife, int t, double[:] u_wife_full, int back,
         double temp_preg, int preg_possible):
 
@@ -36,6 +36,11 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     cdef double utility_leisure = 0
     cdef int kb5
     cdef int kb5_preg
+    cdef int kids_minor = 0
+    cdef int wife_exp_idx
+    cdef int wife_exp_nxt
+    cdef double p_ft
+    cdef double p_pt
 
 
     ###################################################################################################
@@ -54,8 +59,22 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
         else:
             wage_w_part_c = 0
 
-
-    net_income_single_w_ue = c.ub_w  # if single and unemployed
+    # Child benefit (AFDC-style) only paid when at least one kid is still a minor.
+    # Backward: kid ages are not in the EMAX state space, so we approximate via period `t`
+    #   -- pay full benefit up to t<=18 (wife age <=35, when even the earliest-born
+    #   kid is still a minor); zero after, which understates rather than overstates.
+    # Forward: wife.kb18 is tracked exactly, so use it.
+    if wife.kids == 0:
+        net_income_single_w_ue = c.ub_w
+    else:
+        if back == 1:
+            kids_minor = wife.kids if t <= 18 else 0
+        else:
+            kids_minor = wife.kb18
+        if kids_minor > 0:
+            net_income_single_w_ue = c.ub_w + c.cb_const + c.cb_per_child * (kids_minor - 1)
+        else:
+            net_income_single_w_ue = c.ub_w
     net_income_single_w_ef = tax.gross_to_net_single(wife.kids, wage_w_full_c, t, back)  - c.childcare_cost * wife.kb5
     net_income_single_w_ep = tax.gross_to_net_single(wife.kids, wage_w_part_c, t, back)  - 0.6 * c.childcare_cost * wife.kb5
 
@@ -164,31 +183,56 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:] w_s_emax,
     # if women is pregnant, add 1 to the number of children unless the number is already 4
     elif t < c.max_period - 1:
         wife_ability_index = ability_to_index(wife.ability_i)
+        # Next-period experience bucket. UNEMP stays at wife_exp_idx; FT/PT advance to
+        # wife_exp_nxt with prob p_ft/p_pt. Forward (back==0): deterministic (p in {0,1})
+        # from the true continuous experience. Backward (back==1): probabilistic advance
+        # p = increment / bucket_width (uniform-within-bucket), consistent in expectation
+        # with forward accumulation. (See calculate_utility_married for the same logic.)
+        wife_exp_idx = experience_to_index(wife.experience)
+        wife_exp_nxt = wife_exp_idx + 1
+        if wife_exp_nxt > 3:
+            wife_exp_nxt = 3
+        if back == 1:
+            if wife_exp_idx == 0:
+                p_ft = 1.0 / 2.5
+                p_pt = 0.5 / 2.5
+            elif wife_exp_idx == 1:
+                p_ft = 1.0 / 3.0
+                p_pt = 0.5 / 3.0
+            elif wife_exp_idx == 2:
+                p_ft = 1.0 / 5.0
+                p_pt = 0.5 / 5.0
+            else:
+                p_ft = 0.0
+                p_pt = 0.0
+        else:
+            p_ft = 1.0 if experience_to_index(wife.experience + 1.0) > wife_exp_idx else 0.0
+            p_pt = 1.0 if experience_to_index(wife.experience + 0.5) > wife_exp_idx else 0.0
 
-        # w_s_emax[t, school, kids, ability, kb5, we]
+        # w_s_emax[t, school, kids, ability, kb5, wife_exp_idx, we]
         kb5 = wife.kb5
         kb5_preg = min(3, wife.kb5 + 1)
 
-        # options 0-1: unemployed, non-pregnant / pregnant
-        u_wife[0] = u_wife_single[0] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, c.UNEMP]
+        # options 0-1: unemployed, non-pregnant / pregnant (no experience advance)
+        u_wife[0] = u_wife_single[0] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.UNEMP]
         if wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[1] = u_wife_single[1] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, c.UNEMP]
+            u_wife[1] = u_wife_single[1] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.UNEMP]
         else:
             u_wife[1] = float('-inf')
 
-        # options 2-3: employed full, non-pregnant / pregnant
-        u_wife[2] = u_wife_single[2] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, c.EMP]
+        # options 2-3: employed full, non-pregnant / pregnant (advance with p_ft)
+        u_wife[2] = u_wife_single[2] + c.beta0 * ((1.0-p_ft)*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.EMP] + p_ft*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_nxt, c.EMP])
         if  wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[3] = u_wife_single[3] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, c.EMP]
+            u_wife[3] = u_wife_single[3] + c.beta0 * ((1.0-p_ft)*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.EMP] + p_ft*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_nxt, c.EMP])
         else:
             u_wife[3] = float('-inf')
-        # options 4-5: employed part, non-pregnant / pregnant
-        u_wife[4] = u_wife_single[4] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, c.EMP]
+        # options 4-5: employed part, non-pregnant / pregnant (advance with p_pt)
+        u_wife[4] = u_wife_single[4] + c.beta0 * ((1.0-p_pt)*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.EMP] + p_pt*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_nxt, c.EMP])
         if wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index =  wife.kids+1
-            u_wife[5] = u_wife_single[5] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, c.EMP]
+            u_wife[5] = u_wife_single[5] + c.beta0 * ((1.0-p_pt)*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.EMP] + p_pt*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_nxt, c.EMP])
         else:
             u_wife[5] = float('-inf')
 

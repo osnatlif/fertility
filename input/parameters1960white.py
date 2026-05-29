@@ -10,13 +10,13 @@ omega5_h = omega5_w     # men's age*age
 beta0_w  =  0.10   # ability - increased for meaningful selection
 beta11_w    =  0.0394   #  t= experience  HS (was 0.0378)
 beta12_w    =  0.0615  #  t = experience SC (was 0.0594)
-beta13_w    =  0.0605 #  t = experience CG+ (was 0.048613)
+beta13_w    =  0.075 #  t = experience CG+ (was 0.048613)
 beta21_w    =  -0.00063  #  t^2 = exp^2    HS
 beta22_w    =  -0.00122  #  t^2 = exp^2    SC
 beta23_w    =  -0.00092  #  t^2 = exp^2    CG+
 beta31_w    =  10.0379 #  HS (was 9.7722)
-beta32_w    =  10.0875   #  SC (was 9.9029)
-beta33_w    =  10.3496  #  CG+ (was 10.3961)
+beta32_w    =  10.18   #  SC (was 9.9029)
+beta33_w    =  10.55  #  CG+ (was 10.3961)
 beta41_w	=	-0.3 	#	not employed in previous period * HS
 beta42_w	=	-0.4	#	not employed in previous period * SC
 beta43_w	=	-0.7	#	not employed in previous period * CG+
@@ -38,7 +38,7 @@ beta43_h	=	-0.7	#	not employed in previous period * CG+
 lambda0_w_ft = -1.3199531085  # job offer parameters - wife - full time	constant
 lambda1_w_ft = 0.03104	          # job offer parameters - wife	experience
 lambda15_w_ft = 0.0	          # job offer parameters - wife	experience^2
-lambda2_w_ft = 0.041191	      # job offer parameters - wife	education
+lambda2_w_ft = 0.30	      # job offer parameters - wife	education
 lambda0_h_ft = -0.30  	      # job offer parameters - husband - full Time	constant (was 0.103)
 lambda1_h_ft = 0.06	          # job offer parameters - husband	experience (was 0.00021)
 lambda15_h_ft = -0.0015	      # job offer parameters - husband	experience^2

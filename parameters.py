@@ -10,8 +10,12 @@ p = importlib.import_module("input.parameters"+str(cohorts.cohort))
 ##############################################################################
 # fixed parameters - ~41 + 18 emp +5 marriage
 ##############################################################################
-p.mconst = 100.0
-p.taste_cg = 260.0        # taste for homogenous marriage	CG
+# off-diagonal marriage utility, now gender-specific (hypergamy: men value marrying down more)
+p.mconst1_h = 105.0   # husband's utility, 1 edu step gap
+p.mconst1_w = 80.0    # wife's utility, 1 edu step gap
+p.mconst2_h = 80.0    # husband's utility, 2 edu step gap
+p.mconst2_w = 40.0    # wife's utility, 2 edu step gap
+p.taste_cg = 300.0        # taste for homogenous marriage	CG
 p.taste_sc = 150.0    	 # taste for mhomogenous marriage	SC
 p.taste_hs = 110.0    	 # taste for mhomogenous marriage	HS
 p.preg_married = 0      # utility from pregnancy
@@ -19,21 +23,21 @@ p.preg_unmarried = 0   # utility from pregnancy -	unmarried
 p.preg_kids = 0         # utility from pregnancy - number of kids
 # utility from quality and quantity of children
 # utility parameters
-p.alpha0 = 0.541            # utility parameters - CRRA consumption parameter
+p.alpha0 = 0.541            # utility parameters - CRRA consumption parameter (FIXED, not estimated - scale parameter)
 p.alpha2w0 = 0.8            # utility parameters - wife leisure constant (raised to reduce FT)
-p.alpha2w1 = -0.15          # utility parameters - wife leisure * kids
+p.alpha2w1 = 0.15          # utility parameters - wife leisure * kids
 p.alpha2h0 = 0.5            # utility parameters - husband leisure constant
-p.alpha2h1 = -0.1           # utility parameters - husband leisure * kids
-p.alpha3_w_m = 30.0         # utility parameters - wife	utility from kids when married
-p.alpha3_w_s = 21.0          # utility parameters - wife	utility from kids when single
-p.alpha3_h_m = 30.0        	# utility parameters - husband	utility from kids when married
+p.alpha2h1 = 0.1           # utility parameters - husband leisure * kids
+p.alpha3_w_m = 27.0         # utility parameters - wife	utility from kids when married
+p.alpha3_w_s = 3.0          # utility parameters - wife	utility from kids when single
+p.alpha3_h_m = 55.0        	# utility parameters - husband	utility from kids when married
 p.alpha3_h_s = 1.0          # utility parameters - husband	utility from kids when single
 p.alpha4 = 0.65 	            # utility from children
 
 # marriage and divorce cost
 p.mc = 0.0	             # fixed cost of getting married
-p.dc_w = -300.0  	         # fixed cost of divorce wife
-p.dc_h = -600.0  	         # fixed cost of divorce husband
+p.dc_w = -200.0  	         # fixed cost of divorce wife
+p.dc_h = -350.0  	         # fixed cost of divorce husband
 # error terms variance
 p.sigma_ability_w = np.exp(-0.12549)	  # random shock variance wife ability
 p.sigma_ability_h = np.exp(-0.171592)  # random shock variance husband ability
