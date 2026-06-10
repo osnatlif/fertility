@@ -102,7 +102,7 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
             married_index = -99
             choose_partner = 0
             if wife.get_married() == 0 and wife.get_age() <= 55:    #  if not married - draw potential husband
-                prob_meet_potential_partner = meeting_partner.prob(wife.get_age())
+                prob_meet_potential_partner = meeting_partner.prob_w(wife.get_age())
                 assert prob_meet_potential_partner >= 0 and prob_meet_potential_partner <= 1, "invalid prob: " + str(prob_meet_potential_partner)
 
                 temp = np.random.uniform()
@@ -220,7 +220,7 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
             married_index = -99
             choose_partner = 0
             if husband.get_married() == 0 and husband.get_age() <= 55:  # if not married - draw potential wife
-                prob_meet_potential_partner = meeting_partner.prob(husband.get_age())
+                prob_meet_potential_partner = meeting_partner.prob_h(husband.get_age())
 
                 assert prob_meet_potential_partner >= 0 and prob_meet_potential_partner <= 1, "invalid prob: " + str(prob_meet_potential_partner)
 

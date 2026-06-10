@@ -4,8 +4,8 @@
 omega5_w = -0.001481  # women's age*age
 omega4_w = 0.096111   # women's age
 omega3   = -1.200000  # constant
-omega4_h = omega4_w     # men's age
-omega5_h = omega5_w     # men's age*age
+omega4_h = 0.096111     # men's age
+omega5_h =-0.001481     # men's age*age
 # wage parameters wife - calibrated to match actual wage moments
 beta0_w  =  0.10   # ability - increased for meaningful selection
 beta11_w    =  0.0394   #  t= experience  HS (was 0.0378)

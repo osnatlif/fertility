@@ -1,0 +1,101 @@
+% Appendix: Initial Conditions for Forward Simulation Fertility
+% To be included in the main paper.
+
+\section{Initial Conditions for Forward Simulation Fertility}
+\label{app:initial_conditions}
+
+\subsection{Motivation}
+
+The forward simulation begins at the school-completion age associated with each woman's educational attainment: age 18 for high school (HS), age 20 for some college (SC), and age 22 for college graduates (CG+). In the data, a non-trivial fraction of women already have one or more children by these ages, particularly for HS women, whose entry age corresponds to the peak of teenage fertility in the United States. To represent this heterogeneity, we initialize each simulated woman with a number of pre-existing children drawn from a cohort-specific empirical distribution, conditional on her education level. The remaining lifecycle fertility decisions are then made endogenously by the model.
+
+This approach allows us to keep the preference parameters (notably $\alpha_{3,w}^s$ for the utility of children for single women, and $\alpha_{3,w}^m$ for the analog when married) common across cohorts, with cohort-specific differences in early-life fertility absorbed by the initial-condition distributions rather than by re-tuning preferences.
+
+\subsection{Data Source}
+
+For the 1960 birth cohort, the available data provide the marginal distribution of total children ever born at age 22, by education level. Specifically, we observe the mean number of children ($E[k]$), the mean number of children conditional on being a mother ($E[k \mid k > 0]$), and the childless rate ($P(k=0)$):
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Education & $E[k]$ & $E[k \mid k > 0]$ & $P(k=0)$ \\
+\midrule
+HS  & 0.7446 & 1.5252 & 0.5118 \\
+SC  & 0.1606 & 1.2688 & 0.8734 \\
+CG+ & 0.0366 & 1.1005 & 0.9668 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For the 1960 cohort, data at younger ages are not available; we therefore extrapolate the age-22 distribution backward to the entry age of each education group.
+
+\subsection{Reconstructing the Age-22 Distribution}
+
+Two statistics ($E[k]$ and $E[k \mid k > 0]$) suffice to identify the conditional distribution $\{P(k=1), P(k=2)\}$ under the assumption that at age 22, $P(k=3) \approx 0$ (children of order three are observed only at later ages in the data). Specifically:
+\[
+P(k=1 \mid k > 0) + 2 \, P(k=2 \mid k > 0) = E[k \mid k > 0], \qquad P(k=1 \mid k > 0) + P(k=2 \mid k > 0) = 1.
+\]
+Combining with the childless rate gives the unconditional age-22 distribution:
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Education & $P(k=0 \mid a=22)$ & $P(k=1 \mid a=22)$ & $P(k=2 \mid a=22)$ & $E[k]$ check \\
+\midrule
+HS  & 0.5118 & 0.2318 & 0.2564 & 0.7446 \\
+SC  & 0.8734 & 0.0925 & 0.0340 & 0.1606 \\
+CG+ & 0.9668 & 0.0299 & 0.0033 & 0.0366 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Backward Extrapolation to Entry Ages}
+
+For HS and SC women, the relevant entry ages are 18 and 20, respectively. To extrapolate the age-22 distribution backward, we adopt a linear-accumulation assumption: cumulative fertility grows linearly between an exogenous \emph{fertility start age} $f_{\text{start}}$ and age 22.\footnote{Setting $f_{\text{start}} = 14$ corresponds roughly to the typical age at which fecundity begins. The framework treats $f_{\text{start}}$ as a single tunable parameter; the implied entry-age distributions are insensitive to small variations in this value over the range relevant for the model's youngest cohort.} Define the scaling factor:
+\[
+s(a) = \frac{a - f_{\text{start}}}{22 - f_{\text{start}}}, \quad a \in [f_{\text{start}}, 22],
+\]
+with $f_{\text{start}} = 14$. We then have $s(18) = 0.500$, $s(20) = 0.750$, and $s(22) = 1.000$.
+
+The implied entry-age probability of childbearing at order $k \geq 1$ is a scaled-down version of the age-22 probability:
+\[
+P(k \mid a_{\text{entry},e}, e) = s(a_{\text{entry},e}) \cdot P(k \mid a=22, e), \qquad k \geq 1,
+\]
+with the residual probability assigned to $k = 0$:
+\[
+P(k=0 \mid a_{\text{entry},e}, e) = 1 - s(a_{\text{entry},e}) \cdot \bigl(1 - P(k=0 \mid a=22, e)\bigr).
+\]
+This construction preserves the shape of the kid-given-mother distribution while shrinking the overall fertility rate toward zero as the entry age approaches $f_{\text{start}}$.
+
+\subsection{Resulting Initial-Condition Distributions}
+
+For the 1960 cohort, the entry-age distributions used as initial conditions in the forward simulation are:
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Education & Entry age $a_{\text{entry},e}$ & $P(k=0)$ & $P(k=1)$ & $P(k=2)$ \\
+\midrule
+HS  & 18 & 0.7559 & 0.1159 & 0.1282 \\
+SC  & 20 & 0.9050 & 0.0694 & 0.0255 \\
+CG+ & 22 & 0.9668 & 0.0299 & 0.0033 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Each row sums to one. The implied unconditional mean children at entry are $E[k_{18,\text{HS}}] = 0.372$, $E[k_{20,\text{SC}}] = 0.120$, and $E[k_{22,\text{CG+}}] = 0.037$.
+
+The numeric values in the table above are read by the forward simulation from the input file \texttt{input/initial\_kids\_1960white.txt}.
+
+\subsection{Other State Variables at Entry}
+
+Children imputed at entry are taken to be very young, consistent with the early-life timing of teenage and pre-college fertility:
+\begin{itemize}
+\item A woman entering with one child is assigned a child of age 1.
+\item A woman entering with two children is assigned children of ages 2 (the older) and 1 (the younger).
+\item All entry-age children satisfy $\text{kb5} = \text{kids}$ and $\text{kb18} = \text{kids}$.
+\end{itemize}
+Marital status at entry is set to \emph{single} for all women, with the model determining marriage transitions endogenously in the periods that follow. Labor-market experience at entry is zero.
+
+\subsection{Extension to Other Cohorts}
+
+For cohorts with directly observed age-18 and age-20 distributions (e.g., 1985), the backward-extrapolation step is unnecessary; the empirical entry-age distributions replace the linearly-scaled values, and the file \texttt{input/initial\_kids\_<cohort>.txt} is the sole input. The preference parameters remain unchanged across cohorts; differences in observed early-life fertility are accommodated by the cohort-specific initial-condition file.

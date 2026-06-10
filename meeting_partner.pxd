@@ -1,3 +1,4 @@
 
-# probability of meeting a partner based on age
-cpdef double prob(double age)
+# gender-specific probabilities of meeting a partner, by age
+cpdef double prob_w(double age)
+cpdef double prob_h(double age)

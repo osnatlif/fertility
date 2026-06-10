@@ -67,7 +67,7 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
                     _, _, prob_full_h, prob_part_h, tmp_full_h = calculate_wage.calculate_wage_h(husband, t)
                     single_men_value, _ = calculate_utility_single_men(
                         h_s_emax, 0, 0, tmp_full_h, husband, t, u_h_single_full, 1)
-                    prob_meet_potential_partner = meeting_partner.prob(husband.age)
+                    prob_meet_potential_partner = meeting_partner.prob_h(husband.age)
                     single_outside_option = prob_full_h * maxvalue_filter(u_h_single_full, [0, 2], 2) + \
                                             prob_part_h * maxvalue_filter(u_h_single_full, [0, 4], 2) + \
                                             (1 - prob_full_h - prob_part_h) * u_h_single_full[0]
