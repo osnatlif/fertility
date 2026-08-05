@@ -32,7 +32,16 @@ p.alpha3_w_m = 27.0         # utility parameters - wife	utility from kids when m
 p.alpha3_w_s = 3.0          # utility parameters - wife	utility from kids when single
 p.alpha3_h_m = 55.0        	# utility parameters - husband	utility from kids when married
 p.alpha3_h_s = 1.0          # utility parameters - husband	utility from kids when single
-p.alpha4 = 0.65 	            # utility from children
+# first-child (extensive-margin) utilities: kid value = alpha_first*1{kids>=1} + alpha3*(kids-1)^alpha4
+# alpha_first prices the FIRST child (identifies childlessness); alpha3 now prices ADDITIONAL kids only.
+p.alpha_first_w_m = 27.0     # wife   utility from the first child when married
+p.alpha_first_h_m = 55.0     # husband utility from the first child when married
+p.alpha_first_w_s = 3.0      # wife   utility from the first child when single
+p.alpha4 = 0.65 	            # utility from children (concavity of ADDITIONAL kids)
+# wife unobserved kid-taste heterogeneity (STAGE 1: neutral -> behavior unchanged)
+p.kappa_kidtaste_high = 1.0  # neutral: kid-taste type dropped (KID_TASTE_SIZE=1)
+p.pr_kidtaste_high = 0.0     # 0 => single_men's prob_kt weight = 1.0 for the only type
+p.cb_scale = 1.0             # runtime multiplier on single-mother child benefit (cb_const/cb_per_child); 1.0 = baseline
 
 # marriage and divorce cost
 p.mc = 0.0	             # fixed cost of getting married

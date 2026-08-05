@@ -28,6 +28,7 @@ cdef int kids_below_5_size  # number of children below 5: (0, 1, 2, 3)
 cdef int ability_size
 cdef int emp_size     # employed in previous period: (0=NO, 1=YES)
 cdef int match_quality_size  # match quality: (LOW, MEDIUM, HIGH)
+cdef int KID_TASTE_SIZE  # wife kid-taste unobserved type: (0=baseline, 1=high)
 cdef int mother_size
 cdef int mother_marital_size
 cdef int mother_educ

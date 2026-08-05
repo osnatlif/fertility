@@ -14,9 +14,9 @@ from calculate_utility_married cimport calculate_utility_married
 from calculate_utility_single_men cimport calculate_utility_single_men
 
 
-cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
-    double[:, :, :, :, :, :, :, :, :, :, :] h_emax,
-    double[:,:,:,:,:,:,:] w_s_emax,
+cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :, :, :] w_emax,
+    double[:, :, :, :, :, :, :, :, :, :, :, :] h_emax,
+    double[:,:,:,:,:,:,:,:] w_s_emax,
     double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double sum_emax = 0
@@ -26,6 +26,8 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
     cdef int kids
     cdef int ability
     cdef int he
+    cdef int wife_kidtaste
+    cdef double prob_kt
     cdef int draw
     cdef double wage_w_full
     cdef double wage_w_part
@@ -112,43 +114,51 @@ cdef int single_men(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
 
                             _, _, prob_full_w, prob_part_w, tmp_full_w = calculate_wage.calculate_wage_w(wife, t)
 
-                            # Quadrature over temp_preg (continuous) and biological pregnancy (Bernoulli).
-                            # temp (match-quality residual) is 0 here because we're considering a NEW marriage.
-                            for i_p in range(c.N_GH_PREG):
-                                temp_preg = c.gh_nodes_preg[i_p] * p.sigma_p
-                                w_p = c.gh_weights_preg[i_p]
-                                for biological in range(2):
-                                    if preg_pr == 0.0 and biological == 1:
-                                        continue
-                                    if biological == 1:
-                                        w_bio = preg_pr
-                                    else:
-                                        w_bio = 1.0 - preg_pr
-                                    weight = w_p * w_bio
-                                    if weight == 0.0:
-                                        continue
+                            # Integrate over the partner wife's kid-taste type (a wife attribute):
+                            # h_s_emax is NOT kid-taste indexed, so the man sums over the type with
+                            # weight prob_kt. calculate_wage_w above is kid-taste-independent and stays
+                            # outside this loop, so the backward RNG stream is unchanged.
+                            for wife_kidtaste in range(0, c.KID_TASTE_SIZE):
+                                wife.kid_taste = wife_kidtaste
+                                # STAGE 2: weight the drawn partner's kid-taste by the true type share
+                                prob_kt = p.pr_kidtaste_high if wife_kidtaste == 1 else (1.0 - p.pr_kidtaste_high)
+                                # Quadrature over temp_preg (continuous) and biological pregnancy (Bernoulli).
+                                # temp (match-quality residual) is 0 here because we're considering a NEW marriage.
+                                for i_p in range(c.N_GH_PREG):
+                                    temp_preg = c.gh_nodes_preg[i_p] * p.sigma_p
+                                    w_p = c.gh_weights_preg[i_p]
+                                    for biological in range(2):
+                                        if preg_pr == 0.0 and biological == 1:
+                                            continue
+                                        if biological == 1:
+                                            w_bio = preg_pr
+                                        else:
+                                            w_bio = 1.0 - preg_pr
+                                        weight = w_p * w_bio
+                                        if weight == 0.0:
+                                            continue
 
-                                    calculate_utility_married(w_emax, h_emax, 0, 0, 0, 0, tmp_full_h, tmp_full_w, wife, husband, t,
-                                            u_wife, u_husband, u_wife_full, u_husband_full, 1,
-                                            0.0, temp_preg, biological)
-                                    single_women_value, _ = calculate_utility_single_women(
-                                        w_s_emax, 0, 0, tmp_full_w, wife, t, u_w_single_full, 1,
-                                        temp_preg, biological)
+                                        calculate_utility_married(w_emax, h_emax, 0, 0, 0, 0, tmp_full_h, tmp_full_w, wife, husband, t,
+                                                u_wife, u_husband, u_wife_full, u_husband_full, 1,
+                                                0.0, temp_preg, biological)
+                                        single_women_value, _ = calculate_utility_single_women(
+                                            w_s_emax, 0, 0, tmp_full_w, wife, t, u_w_single_full, 1,
+                                            temp_preg, biological)
 
-                                    # bilateral comparison
-                                    weighted_utility = float('-inf')
-                                    married_index = -99
-                                    for i in range(0, 18):
-                                        if u_wife[i] > single_women_value and u_husband[i] > single_men_value:
-                                            if c.bp * u_wife[i] + (1 - c.bp) * u_husband[i] > weighted_utility:
-                                                weighted_utility = c.bp * u_wife[i] + (1 - c.bp) * u_husband[i]
-                                                married_index = i
+                                        # bilateral comparison
+                                        weighted_utility = float('-inf')
+                                        married_index = -99
+                                        for i in range(0, 18):
+                                            if u_wife[i] > single_women_value and u_husband[i] > single_men_value:
+                                                if c.bp * u_wife[i] + (1 - c.bp) * u_husband[i] > weighted_utility:
+                                                    weighted_utility = c.bp * u_wife[i] + (1 - c.bp) * u_husband[i]
+                                                    married_index = i
 
-                                    if married_index > -99:
-                                        value = prob_meet_potential_partner * u_husband[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
-                                    else:
-                                        value = single_outside_option
-                                    sum_emax += prob_s * prob_a * weight * value
+                                        if married_index > -99:
+                                            value = prob_meet_potential_partner * u_husband[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
+                                        else:
+                                            value = single_outside_option
+                                        sum_emax += prob_s * prob_a * prob_kt * weight * value
 
                     h_s_emax[t][school][ability][he] = sum_emax
                     if verbose:

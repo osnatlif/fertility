@@ -14,12 +14,14 @@ from calculate_utility_married cimport calculate_utility_married
 from calculate_utility_single_men cimport calculate_utility_single_men
 
 
-cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
-    double[:, :, :, :, :, :, :, :, :, :, :] h_emax,
-    double[:,:,:,:,:,:,:] w_s_emax,
+cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :, :, :] w_emax,
+    double[:, :, :, :, :, :, :, :, :, :, :, :] h_emax,
+    double[:,:,:,:,:,:,:,:] w_s_emax,
     double[:,:,:,:] h_s_emax, verbose) except -1:
     cdef int iter_count = 0
     cdef double sum_emax
+    cdef int kid_taste
+    cdef double sum_emax_kt[2]   # one EMAX accumulator per wife kid-taste type (size c.KID_TASTE_SIZE)
     cdef double weighted_utility = float('-inf')
     cdef int married_index = -99
     cdef int choose_partner = 0
@@ -68,7 +70,8 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
                         for we in range(0, c.emp_size):
                             wife.emp = we
                             wife.capacity = we
-                            sum_emax = 0
+                            sum_emax_kt[0] = 0.0
+                            sum_emax_kt[1] = 0.0
                             iter_count = iter_count + 1
                             if verbose:
                                 print(wife)
@@ -135,31 +138,38 @@ cdef int single_women(int t, double[:, :, :, :, :, :, :, :, :, :, :] w_emax,
                                             if weight == 0.0:
                                                 continue
 
-                                            calculate_utility_married(w_emax, h_emax, 0, 0, 0, 0, tmp_full_h, tmp_full_w, wife, husband, t,
-                                                    u_wife, u_husband, u_wife_full, u_husband_full, 1,
-                                                    0.0, temp_preg, biological)
-                                            single_women_value, _ = calculate_utility_single_women(
-                                                w_s_emax, 0, 0, tmp_full_w, wife, t, u_w_single_full, 1,
-                                                temp_preg, biological)
-                                            single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3], 4) + \
-                                                                    prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5], 4) + \
-                                                                    (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1], 2)
+                                            # kid_taste is a wife STATE dimension: accumulate a separate
+                                            # EMAX per type. calculate_wage_h / single_men_value above are
+                                            # kid-taste-independent and stay outside this loop, so the
+                                            # backward RNG stream is unchanged (both utility calls are RNG-free).
+                                            for kid_taste in range(0, c.KID_TASTE_SIZE):
+                                                wife.kid_taste = kid_taste
+                                                calculate_utility_married(w_emax, h_emax, 0, 0, 0, 0, tmp_full_h, tmp_full_w, wife, husband, t,
+                                                        u_wife, u_husband, u_wife_full, u_husband_full, 1,
+                                                        0.0, temp_preg, biological)
+                                                single_women_value, _ = calculate_utility_single_women(
+                                                    w_s_emax, 0, 0, tmp_full_w, wife, t, u_w_single_full, 1,
+                                                    temp_preg, biological)
+                                                single_outside_option = prob_full_w * maxvalue_filter(u_w_single_full, [0, 1, 2, 3], 4) + \
+                                                                        prob_part_w * maxvalue_filter(u_w_single_full, [0, 1, 4, 5], 4) + \
+                                                                        (1 - prob_full_w - prob_part_w) * maxvalue_filter(u_w_single_full, [0, 1], 2)
 
-                                            # bilateral comparison
-                                            weighted_utility = float('-inf')
-                                            married_index = -99
-                                            for i in range(0, 18):
-                                                if u_wife[i] > single_women_value and u_husband[i] > single_men_value:
-                                                    if c.bp * u_wife[i] + (1 - c.bp) * u_husband[i] > weighted_utility:
-                                                        weighted_utility = c.bp * u_wife[i] + (1 - c.bp) * u_husband[i]
-                                                        married_index = i
+                                                # bilateral comparison
+                                                weighted_utility = float('-inf')
+                                                married_index = -99
+                                                for i in range(0, 18):
+                                                    if u_wife[i] > single_women_value and u_husband[i] > single_men_value:
+                                                        if c.bp * u_wife[i] + (1 - c.bp) * u_husband[i] > weighted_utility:
+                                                            weighted_utility = c.bp * u_wife[i] + (1 - c.bp) * u_husband[i]
+                                                            married_index = i
 
-                                            if married_index > -99:
-                                                value = prob_meet_potential_partner * u_wife[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
-                                            else:
-                                                value = single_outside_option
-                                            sum_emax += prob_s * prob_a * weight * value
+                                                if married_index > -99:
+                                                    value = prob_meet_potential_partner * u_wife[married_index] + (1 - prob_meet_potential_partner) * single_outside_option
+                                                else:
+                                                    value = single_outside_option
+                                                sum_emax_kt[kid_taste] += prob_s * prob_a * weight * value
 
-                            w_s_emax[t][school][kids][ability][kb5][exp_idx][we] = sum_emax
+                            for kid_taste in range(0, c.KID_TASTE_SIZE):
+                                w_s_emax[t][school][kids][ability][kb5][exp_idx][we][kid_taste] = sum_emax_kt[kid_taste]
 
     return iter_count

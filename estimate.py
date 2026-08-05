@@ -22,8 +22,11 @@ cohorts.cohort = "1960white"   # MUST be set before importing the model modules
 
 import sys
 import csv
+import io
 import os
 import time
+from contextlib import redirect_stdout
+
 import numpy as np
 from scipy.optimize import minimize
 
@@ -42,9 +45,12 @@ import forward_simulation as fs
 # ---------------------------------------------------------------------------
 _MARRIAGE_SPEC = [
     # name          lo      hi     scale
-    ("dc_w",      -800.0,  -20.0,  60.0),
-    ("dc_h",      -800.0,  -20.0,  60.0),
-    ("mc",        -200.0,  200.0,  25.0),       # fixed cost of marriage
+    # dc/mc are ADDED to utility, so NEGATIVE = a genuine cost. Bounds tightened to
+    # the plausible region: dc was settling at -455 (divorce effectively impossible,
+    # ~24 CMA steps from the region where divorce happens) and mc must never be a subsidy.
+    ("dc_w",      -250.0,  -20.0,  30.0),
+    ("dc_h",      -250.0,  -20.0,  30.0),
+    ("mc",        -200.0,    0.0,  25.0),       # fixed cost of marriage (<=0 = cost)
     ("taste_hs",    50.0,  600.0,  40.0),
     ("taste_sc",    50.0,  600.0,  40.0),
     ("taste_cg",    50.0,  600.0,  60.0),
@@ -52,21 +58,31 @@ _MARRIAGE_SPEC = [
     ("mconst1_w",    0.0,  200.0,  25.0),
     ("mconst2_h",    0.0,  200.0,  20.0),
     ("mconst2_w",    0.0,  200.0,  20.0),
-    ("alpha3_w_m",   0.0,  120.0,  12.0),
+    ("alpha3_w_m",   0.0,  120.0,  12.0),       # NOW prices ADDITIONAL kids (kids-1)
     ("alpha3_w_s",   0.0,   30.0,   5.0),
     ("alpha3_h_m",   0.0,  120.0,  15.0),
+    # first-child (extensive) utilities: alpha_first*1{kids>=1}; identify childlessness
+    ("alpha_first_w_m", 0.0, 150.0, 15.0),      # wife  first child, married
+    ("alpha_first_h_m", 0.0, 150.0, 15.0),      # husb  first child, married
+    ("alpha_first_w_s", 0.0,  80.0, 10.0),      # wife  first child, single
+    # kid-taste heterogeneity DROPPED from the search 2026-07-22: kappa converged to its
+    # lower bound (1.03) over 60 gens -- the data reject it. Plumbing retained; KID_TASTE_SIZE
+    # collapsed to 1 to recover the 2x runtime. Re-open only if a targeted moment demands it.
     ("alpha2w0",     0.2,    2.0,   0.2),
     ("alpha2w1",    -0.5,    0.5,   0.1),
-    ("sigma_q",      0.25,   2.0,   0.12),
+    ("sigma_q",      0.05,   2.0,   0.12),   # lower band widened 0.25 -> 0.05 (was pinned at floor)
     ("omega3",      -3.0,    0.0,   0.30),
     # --- meeting-probability age curve, gender-specific (bug fix 2026-06-10) ---
-    ("omega4_w",     0.0,    0.3,   0.02),       # wife: age slope (positive)
-    ("omega5_w",    -0.01,   0.0,   0.0005),     # wife: age^2 slope (concave)
-    ("omega4_h",     0.0,    0.3,   0.02),       # husband: age slope
-    ("omega5_h",    -0.01,   0.0,   0.0005),     # husband: age^2 slope (concave)
+    # omega5 upper bound forced to -0.0012: at -0.0005 the curve had ~no concavity and
+    # rose to P(meet)=1.0 by age 45 (implied peak age 77), which drove the 99% married rate.
+    ("omega4_w",     0.02,   0.15,  0.015),      # wife: age slope (positive)
+    ("omega5_w",    -0.005, -0.0012, 0.0004),    # wife: age^2 slope (must be concave)
+    ("omega4_h",     0.02,   0.15,  0.015),      # husband: age slope
+    ("omega5_h",    -0.005, -0.0012, 0.0004),    # husband: age^2 slope (must be concave)
     # --- terminal value scales (t1-t4 stay FIXED, weak ID) ---
-    ("t5_w",         0.0,  1000.0, 50.0),       # terminal: wife marriage utility
-    ("t5_h",         0.0,  1000.0, 50.0),       # terminal: husband marriage utility
+    # capped at 600: t5_h had run to 966/1000, an implausible terminal pull into marriage
+    ("t5_w",         0.0,   600.0, 40.0),       # terminal: wife marriage utility
+    ("t5_h",         0.0,   600.0, 40.0),       # terminal: husband marriage utility
     ("t6_w",         0.0,  1000.0, 25.0),       # terminal: wife kids utility
     ("t6_h",         0.0,  1000.0, 25.0),       # terminal: husband kids utility
 ]
@@ -97,10 +113,13 @@ _EMPLOYMENT_SPEC = [
 
 _FERTILITY_SPEC = [
     # name            lo      hi     scale
-    ("alpha3_w_m",    0.0,   120.0,  12.0),
+    ("alpha3_w_m",    0.0,   120.0,  12.0),      # ADDITIONAL kids (kids-1)
     ("alpha3_w_s",    0.0,    30.0,   5.0),
     ("alpha3_h_m",    0.0,   120.0,  15.0),
     ("alpha3_h_s",    0.0,    30.0,   5.0),
+    ("alpha_first_w_m", 0.0, 150.0, 15.0),       # first child, wife married
+    ("alpha_first_h_m", 0.0, 150.0, 15.0),       # first child, husb married
+    ("alpha_first_w_s", 0.0,  80.0, 10.0),       # first child, wife single
     ("alpha4",        0.0,     2.0,   0.1),
     ("sigma_p",       0.1,     2.0,   0.1),
 ]
@@ -144,6 +163,37 @@ _WAGE_SPEC = [
 ]
 
 
+# Focused marriage-market phase: ONLY the parameters that drive marriage formation,
+# dissolution and the meeting technology. Marriage+divorce is ~52% of the objective, and
+# a 30-param omnibus phase spreads CMA's covariance over dimensions that don't matter here.
+# No new parameters -- all of these already exist and are estimated elsewhere.
+_MARRIAGE_MARKET_SPEC = [
+    # name          lo        hi      scale
+    # --- dissolution: the lever that fixes marriage AND divorce simultaneously ---
+    ("dc_w",      -250.0,   -20.0,   30.0),
+    ("dc_h",      -250.0,   -20.0,   30.0),
+    ("sigma_q",      0.05,    2.0,    0.15),   # match-quality SD -> bad draws -> divorce
+    # --- formation ---
+    ("mc",        -200.0,     0.0,   25.0),    # entry cost (<=0)
+    ("taste_hs",    50.0,   600.0,   40.0),
+    ("taste_sc",    50.0,   600.0,   40.0),
+    ("taste_cg",    50.0,   600.0,   60.0),
+    ("mconst1_h",    0.0,   200.0,   25.0),
+    ("mconst1_w",    0.0,   200.0,   25.0),
+    ("mconst2_h",    0.0,   200.0,   20.0),
+    ("mconst2_w",    0.0,   200.0,   20.0),
+    # --- meeting technology: the only AGE-VARYING lever (shape, not level) ---
+    ("omega3",      -3.0,     0.0,    0.30),
+    ("omega4_w",     0.02,    0.15,   0.015),
+    ("omega5_w",    -0.005,  -0.0012, 0.0004),
+    ("omega4_h",     0.02,    0.15,   0.015),
+    ("omega5_h",    -0.005,  -0.0012, 0.0004),
+    # --- terminal pull into marriage ---
+    ("t5_w",         0.0,   600.0,   40.0),
+    ("t5_h",         0.0,   600.0,   40.0),
+]
+
+
 def _dedup_union(*specs):
     """Union of specs, preserving FIRST-SEEN bounds/scale for any duplicated name."""
     seen, out = set(), []
@@ -162,6 +212,7 @@ _WAGE_SIGMAS_ONLY = [row for row in _WAGE_SPEC if row[0].startswith("sigma_")]
 
 PHASES = {
     "marriage":   _MARRIAGE_SPEC,
+    "marriage_market": _MARRIAGE_MARKET_SPEC,
     "employment": _EMPLOYMENT_SPEC,
     "fertility":  _FERTILITY_SPEC,
     "wage":       _WAGE_SPEC,
@@ -176,6 +227,7 @@ def _here(name): return os.path.join(_HERE, name)
 
 PHASE_FILES = {
     "marriage":   (_here("estimate_log.csv"),            _here("estimate_best.txt")),
+    "marriage_market": (_here("estimate_log_mktmarriage.csv"), _here("estimate_best_mktmarriage.txt")),
     "employment": (_here("estimate_log_employment.csv"), _here("estimate_best_employment.txt")),
     "fertility":  (_here("estimate_log_fertility.csv"),  _here("estimate_best_fertility.txt")),
     "wage":       (_here("estimate_log_wage.csv"),       _here("estimate_best_wage.txt")),
@@ -226,6 +278,16 @@ def run_model(display=False):
     return float(fs.forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, False, display))
 
 
+def run_model_capture():
+    """Solve+simulate with the moment tables rendered to a STRING instead of the
+    terminal. Returns (objective, moments_text). Drivers print the text only when
+    the eval turns out to be a new best."""
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        total = run_model(display=True)
+    return total, buf.getvalue()
+
+
 # ---- evaluation bookkeeping ----
 _state = {"n": 0, "best": np.inf, "best_theta": None, "t0": time.time()}
 
@@ -234,9 +296,12 @@ def objective_scaled(u):
     """u is theta/SCALE. Unscale, clip to bounds, evaluate, log."""
     theta = np.clip(u * SCALE, LO, HI)
     set_params(theta)
-    total = run_model(display=False)
+    total, moments_text = run_model_capture()
     _state["n"] += 1
+    prev_best_theta = None
     if total < _state["best"]:
+        prev_best_theta = (_state["best_theta"].copy()
+                           if _state["best_theta"] is not None else None)
         _state["best"] = total
         _state["best_theta"] = theta.copy()
         _save_best(theta, total)
@@ -246,6 +311,9 @@ def objective_scaled(u):
     el = (time.time() - _state["t0"]) / 60.0
     print(f"eval {_state['n']:4d} | obj {total:9.2f} | best {_state['best']:9.2f} | {el:6.1f} min{flag}",
           flush=True)
+    if flag:
+        print_deltas(prev_best_theta, theta)
+        print(moments_text, flush=True)     # full moment tables, new best only
     return total
 
 
@@ -254,6 +322,20 @@ def _save_best(theta, total):
         f.write(f"# best objective: {total:.4f}  ({_state['n']} evals)\n")
         for name, val in zip(NAMES, theta):
             f.write(f"p.{name} = {val:.6f}\n")
+
+
+def print_deltas(old_theta, new_theta):
+    """On a new best, print only the params that meaningfully moved vs the
+    previous best: |change| > 1% of the old value, or (for near-zero params,
+    where percent is meaningless) > 2% of the param's SCALE step."""
+    if old_theta is None:
+        return
+    moved = []
+    for name, o, n, s in zip(NAMES, old_theta, new_theta, SCALE):
+        if abs(n - o) > max(0.01 * abs(o), 0.02 * s):
+            moved.append(f"{name}: {o:.4g} -> {n:.4g}")
+    if moved:
+        print("         moved: " + " | ".join(moved), flush=True)
 
 
 def best_from_log():

@@ -71,6 +71,8 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
         wife.set_age(start_age)
         draw_wife.update_wife_schooling(wife)
         draw_wife.update_ability_forward(wife)
+        # draw the wife's unobserved kid-taste type at entry (STAGE 1: fixed share)
+        wife.kid_taste = 1 if np.random.uniform() < p.pr_kidtaste_high else 0
         # Assign initial kids deterministically based on draw_f position within the edu cell.
         # See appendix_initial_conditions.tex. Wife stays single at entry.
         if draw_f < _n0:
@@ -228,6 +230,8 @@ def forward_simulation(w_emax, h_emax, w_s_emax, h_s_emax, verbose, display_mome
                 if temp < prob_meet_potential_partner:
                     choose_partner = 1
                     wife = draw_wife.draw_wife(husband)
+                    # draw the partner wife's unobserved kid-taste type
+                    wife.kid_taste = 1 if np.random.uniform() < p.pr_kidtaste_high else 0
 
             if husband.get_married() == 1 or choose_partner == 1:
                 wage_w_full, wage_w_part, _, _, _ = calculate_wage.calculate_wage_w(wife, period)

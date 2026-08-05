@@ -28,6 +28,10 @@ cdef class Wife:
         return self.capacity
     def get_ability_i(self):
         return self.ability_i
+    def get_kid_taste(self):
+        return self.kid_taste
+    def set_kid_taste(self, int value):
+        self.kid_taste = value
     def get_kb5(self):
         return self.kb5
     def get_married(self):
@@ -50,6 +54,7 @@ cdef class Wife:
         self.preg = 0
         self.ability_value = 0
         self.ability_i = 0
+        self.kid_taste = 0
         self.mother_educ = 0
         self.mother_marital = 0
         self.mother_immig = 0

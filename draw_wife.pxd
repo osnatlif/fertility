@@ -16,6 +16,7 @@ cdef class Wife:
     cdef int preg
     cdef double ability_value
     cdef int ability_i
+    cdef public int kid_taste          # wife unobserved kid-taste type: 0=baseline, 1=high
     cdef int mother_educ
     cdef int mother_marital
     cdef int mother_immig

@@ -28,6 +28,7 @@ import sys
 import os
 import csv
 import time
+import pickle
 import numpy as np
 from multiprocessing import get_context
 
@@ -46,9 +47,16 @@ import estimate as e
 # -----------------------------------------------------------------------------
 # Defaults (tweak here if the 16-CPU box has a different layout)
 # -----------------------------------------------------------------------------
-POPSIZE   = 16        # CMA-ES population per generation
-N_WORKERS = 16        # multiprocessing pool size  (one eval per worker per gen)
-SIGMA0    = 1.0       # initial CMA sigma (per-param step encoded via CMA_stds)
+# Match parallelism to PHYSICAL cores (14 here). The model solve is compute+
+# memory-bound; hyperthreads (20 logical) share the FPU and don't help, and
+# oversubscribing physical cores just adds contention. popsize == workers so a
+# generation runs in ONE wave. (popsize 14 ≈ CMA default for ~44 dims.)
+POPSIZE   = 14        # CMA-ES population per generation
+N_WORKERS = 14        # multiprocessing pool size  (one eval per worker per gen)
+# sigma0 = initial step size. We always warm-start near a known-good point, so
+# use a SMALL sigma0 to EXPLOIT it (spread_i = sigma0 * SCALE_i). 1.0 was a
+# cold-start value that flung gen-1 samples far from the warm start (-> 2958).
+SIGMA0    = 0.3       # initial CMA sigma (per-param step encoded via CMA_stds)
 TOLFUN    = 1.0       # stop when generation best improves by < TOLFUN
 TOLX      = 0.01      # stop when step in scaled coords < TOLX
 SEED      = 1         # CMA-ES internal RNG seed (CRN already handled inside model)
@@ -75,11 +83,13 @@ def _worker_init(phase):
 
 def _worker_eval(theta_list):
     """Evaluate one theta in this worker. theta_list is a plain list for safe
-    pickling across the spawn boundary. Returns the scalar objective."""
+    pickling across the spawn boundary. Returns (objective, moments_text);
+    the text is printed by the MAIN process only if this eval is a new best."""
     import estimate as we
     theta = np.asarray(theta_list, dtype=float)
     we.set_params(theta)
-    return float(we.run_model(display=False))
+    total, moments_text = we.run_model_capture()
+    return total, moments_text
 
 
 # -----------------------------------------------------------------------------
@@ -148,18 +158,43 @@ def main():
         theta0 = e.current_theta()
         print(f"\nno {phase} log found; warm-starting from current p values")
 
-    # CMA-ES options. Sigma0=1 because per-param step lives in CMA_stds.
+    # CMA-ES state checkpoint (per phase). Resuming preserves the learned
+    # covariance/step-size so we DON'T pay the ~100-generation re-learning tax
+    # that a fresh warm-start incurs every launch. Delete this file to force a
+    # cold start (e.g. after changing the SPEC).
+    ckpt_file = e._here(f"estimate_cma_{phase}.pkl")
+
+    # maxiter set very high; the per-launch budget is enforced by gens_this_launch
+    # below, so `maxgen` means "run this many MORE generations" on every launch.
     opts = {
         "bounds":   [lo.tolist(), hi.tolist()],
         "popsize":  POPSIZE,
-        "maxiter":  maxgen,
+        "maxiter":  10_000_000,
         "verbose": -9,                       # suppress CMA's own chatter
         "CMA_stds": scale.tolist(),          # per-param step (= our SCALE)
         "tolfun":   TOLFUN,
         "tolx":     TOLX,
         "seed":     SEED,
     }
-    es = cma.CMAEvolutionStrategy(theta0.tolist(), SIGMA0, opts)
+
+    es = None
+    if os.path.exists(ckpt_file):
+        try:
+            with open(ckpt_file, "rb") as f:
+                loaded = pickle.load(f)
+            if getattr(loaded, "N", None) == npars:
+                es = loaded
+                print(f"\nRESUMING CMA state from {os.path.basename(ckpt_file)} "
+                      f"(countiter={es.countiter}, sigma={es.sigma:.4g}) -- "
+                      f"covariance preserved, no re-learning tax", flush=True)
+            else:
+                print(f"\ncheckpoint dim {getattr(loaded,'N',None)} != {npars} "
+                      f"(SPEC changed?); starting FRESH", flush=True)
+        except Exception as ex:
+            print(f"\ncould not load checkpoint ({ex}); starting FRESH", flush=True)
+    if es is None:
+        print(f"\nno usable CMA checkpoint; fresh CMA warm-started at theta0", flush=True)
+        es = cma.CMAEvolutionStrategy(theta0.tolist(), SIGMA0, opts)
 
     # State for the run-level loop
     eval_count = 0
@@ -174,25 +209,30 @@ def main():
                   initializer=_worker_init,
                   initargs=(phase,)) as pool:
         gen = 0
-        while not es.stop():
+        # gens_this_launch caps generations for THIS invocation; es.stop() still
+        # catches genuine convergence (tolfun/tolx) if it happens sooner.
+        while not es.stop() and gen < maxgen:
             thetas = es.ask()
             # Lists (not arrays) for picklable args across spawn
-            objs = pool.map(_worker_eval, [list(t) for t in thetas])
+            results = pool.map(_worker_eval, [list(t) for t in thetas])
+            objs = [r[0] for r in results]
             es.tell(thetas, objs)
             gen += 1
 
             # Log every individual in this generation; track global best
             gen_best = float("inf")
-            gen_best_theta = None
-            for theta, total in zip(thetas, objs):
+            prev_best_theta = (global_best_theta.copy()
+                               if global_best_theta is not None else None)
+            best_moments_text = None
+            for theta, (total, moments_text) in zip(thetas, results):
                 eval_count += 1
                 _log_eval(log_file, eval_count, np.asarray(theta), total)
                 if total < gen_best:
                     gen_best = total
-                    gen_best_theta = np.asarray(theta)
                 if total < global_best_obj:
                     global_best_obj = total
                     global_best_theta = np.asarray(theta)
+                    best_moments_text = moments_text
                     _save_best(best_file, names, global_best_theta,
                                global_best_obj, eval_count)
 
@@ -202,9 +242,21 @@ def main():
                   f"global_best {global_best_obj:9.2f} | "
                   f"evals {eval_count:5d} | {elapsed:6.1f} min{flag}",
                   flush=True)
+            if flag and best_moments_text is not None:
+                e.print_deltas(prev_best_theta, global_best_theta)
+                print(best_moments_text, flush=True)   # moments of the new best only
+
+            # Save CMA state every generation (crash-resilient; small file).
+            try:
+                with open(ckpt_file, "wb") as f:
+                    pickle.dump(es, f)
+            except Exception as ex:
+                print(f"  WARNING: could not save CMA checkpoint ({ex})", flush=True)
 
     # Stop reason from CMA
-    print(f"\nCMA-ES stop: {es.stop()}", flush=True)
+    print(f"\nran {gen} generations this launch. CMA-ES stop: {es.stop()}", flush=True)
+    print(f"CMA state saved to {os.path.basename(ckpt_file)} "
+          f"(delete it to force a cold start next launch)", flush=True)
 
     # Final re-solve at the logged best with the full moment tables printed.
     print("\n==================== PARALLEL ESTIMATION DONE ====================")

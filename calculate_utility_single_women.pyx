@@ -11,7 +11,7 @@ cdef extern from "randn.cc":
 from draw_wife cimport Wife
 from value_to_index cimport ability_to_index, experience_to_index
 
-cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
+cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:,:] w_s_emax,
         double wage_w_part, double wage_w_full, double tmp_w_full, Wife wife, int t, double[:] u_wife_full, int back,
         double temp_preg, int preg_possible):
 
@@ -24,6 +24,10 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
     cdef double budget_c_single_w_ef = 0
     cdef double budget_c_single_w_ep = 0
     cdef double kids_utility = 0
+    cdef double first_kid = 0
+    cdef double kids_marginal = 0
+    cdef double kids_value_w_s = 0
+    cdef double kappa = 1.0
     cdef double preg_utility_um = 0
     cdef double divorce_cost_w = 0
     cdef double[6] u_wife_single
@@ -72,7 +76,7 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
         else:
             kids_minor = wife.kb18
         if kids_minor > 0:
-            net_income_single_w_ue = c.ub_w + c.cb_const + c.cb_per_child * (kids_minor - 1)
+            net_income_single_w_ue = c.ub_w + p.cb_scale * (c.cb_const + c.cb_per_child * (kids_minor - 1))
         else:
             net_income_single_w_ue = c.ub_w
     net_income_single_w_ef = tax.gross_to_net_single(wife.kids, wage_w_full_c, t, back)  - c.childcare_cost * wife.kb5
@@ -113,12 +117,19 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
     utility_leisure = p.alpha2w0 * (c.leisure - c.home_p) + p.alpha2w1 * wife.kids * (c.leisure - c.home_p)
     utility_leisure_part = p.alpha2w0 * (c.leisure_part - c.home_p) + p.alpha2w1 * wife.kids * (c.leisure_part - c.home_p)
 
+    # extensive (first child) vs intensive (additional kids) split, mirroring the
+    # married file: kid value = alpha_first_w_s*1{kids>=1} + alpha3_w_s*(kids-1)^alpha4
     if wife.kids > 0:
-        kids_utility = cmath.pow(wife.kids, p.alpha4)
+        first_kid = 1.0
+        kids_marginal = cmath.pow(wife.kids - 1, p.alpha4)   # 0 when kids==1
     elif wife.kids == 0:
-        kids_utility = 0
+        first_kid = 0.0
+        kids_marginal = 0.0
     else:
         assert False
+    # wife kid-taste type scales her kid value. STAGE 1: kappa == 1.0 -> exact no-op.
+    kappa = 1.0 if wife.kid_taste == 0 else p.kappa_kidtaste_high
+    kids_value_w_s = kappa * (p.alpha_first_w_s * first_kid + p.alpha3_w_s * kids_marginal)
 
     # temp_preg is passed in: Gauss-Hermite node in backward, randn() in forward
     if wife.age < c.MAX_FERTILITY_AGE:
@@ -139,26 +150,26 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
     # wife current utility from each option:
     divorce_cost_w = p.dc_w
     u_wife_single[0] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ue, p.alpha0) + \
-        utility_leisure + p.alpha3_w_s * kids_utility + divorce_cost_w * wife.married
+        utility_leisure + kids_value_w_s + divorce_cost_w * wife.married
     if wife.age < c.MAX_FERTILITY_AGE:
         u_wife_single[1] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ue, p.alpha0) + \
-        utility_leisure + p.alpha3_w_s * kids_utility + preg_utility_um + divorce_cost_w * wife.married
+        utility_leisure + kids_value_w_s + preg_utility_um + divorce_cost_w * wife.married
     else:
         u_wife_single[1] = float('-inf')
 
     u_wife_single[2] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ef, p.alpha0) + \
-             p.alpha3_w_s * kids_utility + divorce_cost_w * wife.married
+             kids_value_w_s + divorce_cost_w * wife.married
     if wife.age < c.MAX_FERTILITY_AGE:
         u_wife_single[3] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ef, p.alpha0) + \
-                p.alpha3_w_s * kids_utility + preg_utility_um + divorce_cost_w * wife.married
+                kids_value_w_s + preg_utility_um + divorce_cost_w * wife.married
     else:
         u_wife_single[3] = float('-inf')
 
     u_wife_single[4] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ep, p.alpha0) + \
-            utility_leisure_part + p.alpha3_w_s * kids_utility + divorce_cost_w * wife.married
+            utility_leisure_part + kids_value_w_s + divorce_cost_w * wife.married
     if wife.age < c.MAX_FERTILITY_AGE:
         u_wife_single[5] = (1 / p.alpha0) * cmath.pow(budget_c_single_w_ep, p.alpha0) + \
-        utility_leisure_part + p.alpha3_w_s * kids_utility + preg_utility_um + divorce_cost_w * wife.married
+        utility_leisure_part + kids_value_w_s + preg_utility_um + divorce_cost_w * wife.married
     else:
         u_wife_single[5] = float('-inf')
 
@@ -214,25 +225,25 @@ cpdef tuple calculate_utility_single_women(double[:,:,:,:,:,:,:] w_s_emax,
         kb5_preg = min(3, wife.kb5 + 1)
 
         # options 0-1: unemployed, non-pregnant / pregnant (no experience advance)
-        u_wife[0] = u_wife_single[0] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.UNEMP]
+        u_wife[0] = u_wife_single[0] + c.beta0 * w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.UNEMP, wife.kid_taste]
         if wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[1] = u_wife_single[1] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.UNEMP]
+            u_wife[1] = u_wife_single[1] + c.beta0 * w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.UNEMP, wife.kid_taste]
         else:
             u_wife[1] = float('-inf')
 
         # options 2-3: employed full, non-pregnant / pregnant (advance with p_ft)
-        u_wife[2] = u_wife_single[2] + c.beta0 * ((1.0-p_ft)*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.EMP] + p_ft*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_nxt, c.EMP])
+        u_wife[2] = u_wife_single[2] + c.beta0 * ((1.0-p_ft)*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.EMP, wife.kid_taste] + p_ft*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_nxt, c.EMP, wife.kid_taste])
         if  wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index = wife.kids+1
-            u_wife[3] = u_wife_single[3] + c.beta0 * ((1.0-p_ft)*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.EMP] + p_ft*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_nxt, c.EMP])
+            u_wife[3] = u_wife_single[3] + c.beta0 * ((1.0-p_ft)*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.EMP, wife.kid_taste] + p_ft*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_nxt, c.EMP, wife.kid_taste])
         else:
             u_wife[3] = float('-inf')
         # options 4-5: employed part, non-pregnant / pregnant (advance with p_pt)
-        u_wife[4] = u_wife_single[4] + c.beta0 * ((1.0-p_pt)*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.EMP] + p_pt*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_nxt, c.EMP])
+        u_wife[4] = u_wife_single[4] + c.beta0 * ((1.0-p_pt)*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_idx, c.EMP, wife.kid_taste] + p_pt*w_s_emax[t+1, wife.schooling, wife.kids, wife_ability_index, kb5, wife_exp_nxt, c.EMP, wife.kid_taste])
         if wife.age < c.MAX_FERTILITY_AGE and wife.kids < 3:
             kids_index =  wife.kids+1
-            u_wife[5] = u_wife_single[5] + c.beta0 * ((1.0-p_pt)*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.EMP] + p_pt*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_nxt, c.EMP])
+            u_wife[5] = u_wife_single[5] + c.beta0 * ((1.0-p_pt)*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_idx, c.EMP, wife.kid_taste] + p_pt*w_s_emax[t+1, wife.schooling, kids_index, wife_ability_index, kb5_preg, wife_exp_nxt, c.EMP, wife.kid_taste])
         else:
             u_wife[5] = float('-inf')
 

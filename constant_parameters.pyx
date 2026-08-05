@@ -69,6 +69,9 @@ cdef int kids_below_5_size = 4  # number of children below 5: (0, 1, 2, 3)
 cdef int ability_size = 3
 cdef int emp_size = 2     # employed in previous period: (0=NO, 1=YES)
 cdef int match_quality_size = 3  # match quality: (LOW, MEDIUM, HIGH)
+cdef int KID_TASTE_SIZE = 1  # wife kid-taste unobserved type: collapsed to 1 (2026-07-22)
+                             # kappa converged to its lower bound => data reject the type.
+                             # Plumbing retained; set back to 2 (+ pr>0) to re-enable.
 
 # maximum fertility age
 cdef int MAX_FERTILITY_AGE = 45
@@ -94,7 +97,7 @@ cdef double cb_per_child
 
 if cohort == 1960:
     cb_const = 3000.0 # child benefit for single mom + 1 kid - annually (was 4317.681; scaled down to dampen HS unwed-fertility incentive)
-    cb_per_child = 1517.235
+    cb_per_child = 900.0 # per additional kid (was 1517.235; lowered 2026-07 to match sublinear AFDC increment ~$700-950/yr, Green Book)
 elif cohort == 1985:
     cb_const = 4530.784 # child benefit for single mom + 1 kid - annually
     cb_per_child = 975.3533
@@ -123,6 +126,7 @@ school_size_f = school_size
 ability_size_f = ability_size
 emp_size_f = emp_size
 match_quality_size_f = match_quality_size
+KID_TASTE_SIZE_f = KID_TASTE_SIZE
 cohort_f = cohort
 bp_f = bp
 N_AGE_GROUPS_f = N_AGE_GROUPS

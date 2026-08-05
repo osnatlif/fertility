@@ -1,3 +1,6 @@
+import io
+from contextlib import redirect_stdout
+
 import numpy as np
 import constant_parameters as c
 from tabulate import tabulate
@@ -99,6 +102,15 @@ class Moments:
 
 
 def calculate_moments(m, display_moments):
+    """Compute the scalar objective. Prints the full moment tables ONLY when
+    display_moments is true; otherwise runs silently (prints swallowed)."""
+    if not display_moments:
+        with redirect_stdout(io.StringIO()):
+            return _calculate_moments_body(m)
+    return _calculate_moments_body(m)
+
+
+def _calculate_moments_body(m):
     actual = ActualMoments()
     edu_labels = ["HS", "SC", "CG+"]
 
@@ -127,34 +139,6 @@ def calculate_moments(m, display_moments):
     fert_tot_u = aggregate_to_age_groups(m.fertility_total_unmarried)
     fert_cnt_u = aggregate_to_age_groups(m.fertility_count_unmarried)
     childless_u = aggregate_to_age_groups(m.childless_unmarried)
-
-    # ========== DIAGNOSTIC: annual data for women ==========
-    print("\n===== DIAGNOSTIC: ANNUAL WOMEN (all edu levels) =====")
-    print("Age  | HS:Total  HS:Marr  HS:Div  HS:Kids | SC:Total  SC:Marr  SC:Div  SC:Kids | CG:Total  CG:Marr  CG:Div  CG:Kids")
-    for age in range(18, 56):
-        idx = age - 18
-        parts = []
-        for e in range(N_EDU):
-            tot = m.total_w[e, idx]
-            marr = m.marriage_w[e, idx] / tot if tot > 0 else 0
-            div = m.divorce_w[e, idx] / tot if tot > 0 else 0
-            fert_cnt = m.fertility_count_married[e, idx] + m.fertility_count_unmarried[e, idx]
-            fert_tot = m.fertility_total_married[e, idx] + m.fertility_total_unmarried[e, idx]
-            kids = fert_tot / fert_cnt if fert_cnt > 0 else 0
-            parts.append(f"{tot:7.0f}  {marr:6.2f}  {div:5.2f}  {kids:6.2f}")
-        print(f" {age}  | {'  | '.join(parts)}")
-
-    print("\n===== DIAGNOSTIC: ANNUAL MEN (all edu levels) =====")
-    print("Age  | HS:Total  HS:Marr  HS:Div  | SC:Total  SC:Marr  SC:Div  | CG:Total  CG:Marr  CG:Div")
-    for age in range(18, 56):
-        idx = age - 18
-        parts = []
-        for e in range(N_EDU):
-            tot = m.total_h[e, idx]
-            marr = m.marriage_h[e, idx] / tot if tot > 0 else 0
-            div = m.divorce_h[e, idx] / tot if tot > 0 else 0
-            parts.append(f"{tot:7.0f}  {marr:6.2f}  {div:5.2f}")
-        print(f" {age}  | {'  | '.join(parts)}")
 
     # ========== MARRIED WOMEN: employment + wage ==========
     print("\n===== MARRIED WOMEN =====")
